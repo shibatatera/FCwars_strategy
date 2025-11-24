@@ -1,0 +1,1482 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>戦略シミュレーション (AI搭乗強化版)</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #222;
+            font-family: 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        canvas {
+            display: block;
+            margin: 0 auto;
+            background-color: #000;
+        }
+        #ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 10;
+        }
+        .btn {
+            pointer-events: auto; background: #fff; border: 2px solid #333; border-radius: 8px;
+            padding: 12px 20px; font-weight: bold; font-size: 14px;
+            box-shadow: 0 4px 0 #888; cursor: pointer; transition: transform 0.1s;
+        }
+        .btn:active { transform: translateY(4px); box-shadow: 0 0 0 #888; }
+        #end-turn-btn {
+            position: absolute; bottom: 20px; right: 20px;
+            background-color: #ffecec; color: #d00; border-color: #d00; display: none;
+        }
+        #help-btn {
+            position: absolute; top: 10px; right: 10px; background-color: #eef; color: #338; padding: 8px 12px;
+        }
+        #info-panel {
+            position: absolute; top: 10px; left: 10px; background: rgba(255,255,255,0.95);
+            padding: 8px 12px; border-radius: 6px; font-size: 13px; line-height: 1.4;
+            pointer-events: none; display: none; box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        #toast-msg {
+            position: absolute; top: 15%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8); color: white; padding: 10px 20px; border-radius: 30px;
+            font-size: 14px; pointer-events: none; opacity: 0; transition: opacity 0.3s;
+            z-index: 300; text-align: center; width: max-content; max-width: 90%;
+        }
+        
+        .overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 100; display: none;
+            flex-direction: column; justify-content: center; align-items: center;
+            color: white; pointer-events: auto;
+        }
+        .menu-btn {
+            background: #4a90e2; color: white; border: none; padding: 15px 0; margin: 10px;
+            font-size: 16px; border-radius: 8px; cursor: pointer; width: 260px;
+            text-align: center; box-shadow: 0 4px 0 #215a9c;
+        }
+        .menu-btn:active { transform: translateY(4px); box-shadow: none; }
+        
+        #action-menu {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 10px; pointer-events: auto; z-index: 50;
+            display: none; flex-wrap: wrap; justify-content: center; width: 95%;
+        }
+        .action-btn {
+            background: #fff; border: 2px solid #333; border-radius: 10px;
+            width: 60px; height: 60px; display: flex; justify-content: center; align-items: center;
+            font-weight: bold; font-size: 11px; color: #333;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.5); cursor: pointer; flex-direction: column; margin-bottom: 5px;
+        }
+        .action-btn:active { transform: translateY(4px); box-shadow: none; }
+        .action-btn.disabled { background: #ccc; color: #888; pointer-events: none; box-shadow: none; opacity: 0.7; display: none; }
+        .action-icon { font-size: 18px; margin-bottom: 2px; }
+
+        #targeting-ui, #drop-ui {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            display: none; pointer-events: auto; z-index: 55; flex-direction: column; align-items: center;
+        }
+        #confirm-attack-ui {
+            position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
+            display: none; pointer-events: auto; z-index: 60; flex-direction: column; align-items: center;
+        }
+        .fire-btn-group { display: flex; gap: 15px; }
+        #fire-btn {
+            background: #d00; color: white; border: 2px solid #fff;
+            width: 100px; height: 50px; border-radius: 25px; font-size: 18px; font-weight: bold;
+            box-shadow: 0 4px 0 #800; cursor: pointer;
+        }
+        #fire-btn:active { transform: translateY(4px); box-shadow: none; }
+        .cancel-btn-small {
+            background: #fff; color: #333; border: 2px solid #888; width: 80px; height: 50px;
+            border-radius: 25px; font-size: 14px; font-weight: bold; box-shadow: 0 4px 0 #555; cursor: pointer;
+        }
+        .cancel-btn-small:active { transform: translateY(4px); box-shadow: none; }
+
+        #production-menu {
+            display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: #fff; color: #333; padding: 15px; border-radius: 12px; width: 320px;
+            max-height: 85%; overflow-y: auto; z-index: 200;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5); text-align: center; pointer-events: auto;
+        }
+        .prod-header { margin: 0 0 10px 0; padding-bottom: 10px; border-bottom: 1px solid #eee; font-size: 18px; font-weight: bold; }
+        #unit-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px; }
+        .unit-prod-btn {
+            background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px; padding: 10px;
+            cursor: pointer; font-size: 12px; transition: background 0.1s;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .unit-prod-btn:hover { background: #e2e6ea; }
+        .unit-prod-btn b { font-size: 14px; margin-bottom: 4px; color:#000; }
+        .unit-desc { font-size: 10px; color: #666; margin-top:2px;}
+        .bg-cover {
+            position: absolute; top:0; left:0; width:100%; height:100%;
+            background: rgba(0,0,0,0.6); z-index: 199; display: none; pointer-events: auto;
+        }
+        
+        #help-modal {
+            background: white; color: #333; width: 90%; max-width: 400px; max-height: 80%;
+            overflow-y: auto; border-radius: 10px; padding: 20px; box-sizing: border-box;
+            display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            z-index: 200; box-shadow: 0 10px 30px rgba(0,0,0,0.5); pointer-events: auto;
+        }
+        #help-modal h3 { margin-top: 0; color: #4a90e2; border-bottom: 2px solid #eee; padding-bottom: 10px;}
+        #help-modal ul { padding-left: 20px; font-size: 14px; }
+        #help-modal li { margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+
+<canvas id="gameCanvas"></canvas>
+
+<div id="ui-layer">
+    <div id="info-panel"></div>
+    <div id="toast-msg"></div>
+    <button id="help-btn" class="btn" onclick="toggleHelp()">？ 遊び方</button>
+    <button id="end-turn-btn" class="btn">ターン終了</button>
+
+    <div id="action-menu">
+        <button id="act-attack" class="action-btn" onclick="game.uiActionAttack()"><span class="action-icon">⚔️</span>攻撃</button>
+        <button id="act-capture" class="action-btn" onclick="game.uiActionCapture()"><span class="action-icon">🏳️</span>占領</button>
+        <button id="act-board" class="action-btn" onclick="game.uiActionBoard()"><span class="action-icon">🚪</span>搭乗</button>
+        <button id="act-drop" class="action-btn" onclick="game.uiActionDrop()"><span class="action-icon">📦</span>降車</button>
+        <button id="act-wait" class="action-btn" onclick="game.uiActionWait()"><span class="action-icon">🛑</span>待機</button>
+        <button id="act-cancel" class="action-btn" style="background:#eee;" onclick="game.uiActionCancel()"><span class="action-icon">↩️</span>戻る</button>
+    </div>
+
+    <div id="targeting-ui">
+        <div style="color:white; margin-bottom:10px; font-weight:bold; text-shadow:1px 1px 0 #000;">攻撃対象を選択</div>
+        <button class="cancel-btn-small" onclick="game.uiReturnToActionMenu()">戻る</button>
+    </div>
+
+    <div id="drop-ui">
+        <div style="color:white; margin-bottom:10px; font-weight:bold; text-shadow:1px 1px 0 #000;">降ろす場所を選択</div>
+        <button class="cancel-btn-small" onclick="game.uiReturnToActionMenu()">戻る</button>
+    </div>
+
+    <div id="confirm-attack-ui">
+        <div class="fire-btn-group">
+            <button class="cancel-btn-small" onclick="game.uiReturnToTargeting()">戻る</button>
+            <button id="fire-btn" onclick="game.uiConfirmAttack()">発射！</button>
+        </div>
+        <div style="text-align:center; color:white; margin-top:5px; font-weight:bold; text-shadow:1px 1px 0 #000;">対象をタップして変更</div>
+    </div>
+</div>
+
+<div id="menu-overlay" class="overlay" style="display:flex;">
+    <h1 style="margin-bottom:10px; text-shadow: 2px 2px 0 #000;">WAR SIMULATION</h1>
+    <p style="font-size:14px; color:#ccc; margin-bottom:30px;">AI搭乗・連携アップデート</p>
+    <div id="stage-select">
+        <button class="menu-btn" onclick="startGame(0)">ステージ 1 (地上戦)</button>
+        <button class="menu-btn" onclick="startGame(1)">ステージ 2 (空港追加)</button>
+        <button class="menu-btn" onclick="startGame(2)">ステージ 3 (海空戦)</button>
+        <button class="menu-btn" style="background:#e67e22;" onclick="startGame(3)">ステージ 4 (巨大マップ)</button>
+    </div>
+</div>
+
+<div id="message-overlay" class="overlay">
+    <h2 id="message-text" style="font-size:2em; margin-bottom:20px;"></h2>
+    <button class="menu-btn" onclick="resetGame()">タイトルへ戻る</button>
+</div>
+
+<div id="prod-bg" class="bg-cover" onclick="closeProduction()"></div>
+<div id="production-menu">
+    <div class="prod-header">ユニット生産</div>
+    <div id="unit-list"></div>
+    <button class="menu-btn" style="background:#6c757d; width:100%; margin:0; padding:12px;" onclick="closeProduction()">キャンセル</button>
+</div>
+
+<div id="help-bg" class="bg-cover" onclick="toggleHelp()"></div>
+<div id="help-modal">
+    <h3>AIアップデート</h3>
+    <p>CPUが輸送ユニットを活用するようになりました。</p>
+    <ul>
+        <li><strong>連携:</strong> 歩兵は積極的に輸送機に乗ろうとし、輸送機は歩兵を迎えに行きます。</li>
+        <li><strong>ルール修正:</strong> 海上のヘリを歩兵が通過できなくなりました。</li>
+    </ul>
+    <button class="menu-btn" style="width:100%; margin:10px 0 0 0; padding:10px;" onclick="toggleHelp()">閉じる</button>
+</div>
+
+<script>
+let TILE_SIZE = 50;
+let COLS = 10;
+let ROWS = 12; 
+
+const TERRAIN = {
+    PLAIN: 0, ROAD: 1, FOREST: 2, MOUNTAIN: 3, SEA: 4,
+    HQ: 10, CITY: 11, PORT: 12, AIRPORT: 13, SHOAL: 14 
+};
+const BUILDING_IDS = [10, 11, 12, 13];
+
+const TERRAIN_PROPS = {
+    [TERRAIN.PLAIN]: { color: '#8f8', cost: 1, defense: 1 },
+    [TERRAIN.ROAD]:  { color: '#aaa', cost: 1, defense: 0 }, 
+    [TERRAIN.FOREST]:{ color: '#272', cost: 2, defense: 2 },
+    [TERRAIN.MOUNTAIN]:{ color: '#642', cost: 99, defense: 4 }, 
+    [TERRAIN.SEA]:   { color: '#48d', cost: 1, defense: 0 },    
+    [TERRAIN.HQ]:    { color: '#333', cost: 1, defense: 3 },
+    [TERRAIN.CITY]:  { color: '#bbb', cost: 1, defense: 3 },
+    [TERRAIN.PORT]:  { color: '#48d', cost: 1, defense: 2 },     
+    [TERRAIN.AIRPORT]:{ color: '#999', cost: 1, defense: 2 },
+    [TERRAIN.SHOAL]: { color: '#f6e58d', cost: 1, defense: 0 } 
+};
+
+const UNIT_TYPES = {
+    INFANTRY: 'infantry', APC: 'apc', TANK: 'tank', ARTILLERY: 'artillery', ANTIAIR: 'antiair',
+    HELI: 'heli', FIGHTER: 'fighter', BOMBER: 'bomber', SHIP: 'ship', CARRIER: 'carrier', LANDER: 'lander'
+};
+const MOVETYPE = { LAND: 0, AIR: 1, SEA: 2, FOOT: 3 };
+
+const DMG = {
+    [UNIT_TYPES.INFANTRY]: { [UNIT_TYPES.INFANTRY]: 55, [UNIT_TYPES.APC]: 15, [UNIT_TYPES.TANK]: 5,  [UNIT_TYPES.ARTILLERY]: 15, [UNIT_TYPES.ANTIAIR]: 15, [UNIT_TYPES.HELI]: 10, [UNIT_TYPES.BOMBER]: 0, [UNIT_TYPES.FIGHTER]: 0, [UNIT_TYPES.LANDER]: 0 },
+    [UNIT_TYPES.APC]:      { [UNIT_TYPES.INFANTRY]: 75, [UNIT_TYPES.APC]: 50, [UNIT_TYPES.TANK]: 15, [UNIT_TYPES.ARTILLERY]: 50, [UNIT_TYPES.ANTIAIR]: 50, [UNIT_TYPES.HELI]: 40, [UNIT_TYPES.BOMBER]: 0, [UNIT_TYPES.FIGHTER]: 0, [UNIT_TYPES.LANDER]: 0 },
+    [UNIT_TYPES.TANK]:     { [UNIT_TYPES.INFANTRY]: 80, [UNIT_TYPES.APC]: 85, [UNIT_TYPES.TANK]: 55, [UNIT_TYPES.ARTILLERY]: 75, [UNIT_TYPES.ANTIAIR]: 75, [UNIT_TYPES.HELI]: 15, [UNIT_TYPES.BOMBER]: 0, [UNIT_TYPES.FIGHTER]: 0, [UNIT_TYPES.SHIP]: 10, [UNIT_TYPES.LANDER]: 55 },
+    [UNIT_TYPES.ARTILLERY]:{ [UNIT_TYPES.INFANTRY]: 45, [UNIT_TYPES.APC]: 70, [UNIT_TYPES.TANK]: 70, [UNIT_TYPES.ARTILLERY]: 75, [UNIT_TYPES.ANTIAIR]: 75, [UNIT_TYPES.HELI]: 0, [UNIT_TYPES.BOMBER]: 0, [UNIT_TYPES.FIGHTER]: 0, [UNIT_TYPES.SHIP]: 40, [UNIT_TYPES.LANDER]: 60 },
+    [UNIT_TYPES.ANTIAIR]:  { [UNIT_TYPES.INFANTRY]: 0, [UNIT_TYPES.APC]: 0, [UNIT_TYPES.TANK]: 0, [UNIT_TYPES.ARTILLERY]: 0, [UNIT_TYPES.ANTIAIR]: 0, [UNIT_TYPES.HELI]: 110, [UNIT_TYPES.BOMBER]: 85, [UNIT_TYPES.FIGHTER]: 75, [UNIT_TYPES.SHIP]: 0, [UNIT_TYPES.LANDER]: 0 },
+    [UNIT_TYPES.HELI]:     { [UNIT_TYPES.INFANTRY]: 95, [UNIT_TYPES.APC]: 65, [UNIT_TYPES.TANK]: 35, [UNIT_TYPES.ARTILLERY]: 65, [UNIT_TYPES.ANTIAIR]: 40, [UNIT_TYPES.HELI]: 65, [UNIT_TYPES.BOMBER]: 20, [UNIT_TYPES.FIGHTER]: 20, [UNIT_TYPES.SHIP]: 25, [UNIT_TYPES.LANDER]: 45 },
+    [UNIT_TYPES.FIGHTER]:  { [UNIT_TYPES.INFANTRY]: 60, [UNIT_TYPES.APC]: 50, [UNIT_TYPES.TANK]: 25, [UNIT_TYPES.ARTILLERY]: 30, [UNIT_TYPES.ANTIAIR]: 30, [UNIT_TYPES.HELI]: 100, [UNIT_TYPES.BOMBER]: 100, [UNIT_TYPES.FIGHTER]: 55, [UNIT_TYPES.SHIP]: 20, [UNIT_TYPES.LANDER]: 40 },
+    [UNIT_TYPES.BOMBER]:   { [UNIT_TYPES.INFANTRY]: 110, [UNIT_TYPES.APC]: 110, [UNIT_TYPES.TANK]: 105, [UNIT_TYPES.ARTILLERY]: 110, [UNIT_TYPES.ANTIAIR]: 105, [UNIT_TYPES.HELI]: 0, [UNIT_TYPES.BOMBER]: 0, [UNIT_TYPES.FIGHTER]: 0, [UNIT_TYPES.SHIP]: 85, [UNIT_TYPES.CARRIER]: 105, [UNIT_TYPES.LANDER]: 105 },
+    [UNIT_TYPES.SHIP]:     { [UNIT_TYPES.INFANTRY]: 85, [UNIT_TYPES.APC]: 80, [UNIT_TYPES.TANK]: 80, [UNIT_TYPES.ARTILLERY]: 80, [UNIT_TYPES.ANTIAIR]: 80, [UNIT_TYPES.HELI]: 85, [UNIT_TYPES.BOMBER]: 85, [UNIT_TYPES.FIGHTER]: 85, [UNIT_TYPES.SHIP]: 55, [UNIT_TYPES.CARRIER]: 60, [UNIT_TYPES.LANDER]: 95 },
+    [UNIT_TYPES.CARRIER]:  { [UNIT_TYPES.INFANTRY]: 0, [UNIT_TYPES.APC]: 0, [UNIT_TYPES.TANK]: 0, [UNIT_TYPES.ARTILLERY]: 0, [UNIT_TYPES.ANTIAIR]: 0, [UNIT_TYPES.HELI]: 100, [UNIT_TYPES.BOMBER]: 100, [UNIT_TYPES.FIGHTER]: 80, [UNIT_TYPES.SHIP]: 0, [UNIT_TYPES.LANDER]: 0 },
+    [UNIT_TYPES.LANDER]:   { [UNIT_TYPES.INFANTRY]: 0, [UNIT_TYPES.APC]: 0, [UNIT_TYPES.TANK]: 0, [UNIT_TYPES.ARTILLERY]: 0, [UNIT_TYPES.ANTIAIR]: 0, [UNIT_TYPES.HELI]: 0, [UNIT_TYPES.BOMBER]: 0, [UNIT_TYPES.FIGHTER]: 0, [UNIT_TYPES.SHIP]: 0, [UNIT_TYPES.LANDER]: 0 }
+};
+
+const UNITS = {
+    [UNIT_TYPES.INFANTRY]: { name: '兵士', label: '歩', cost: 1000, move: 3, range: [1,1], moveType: MOVETYPE.FOOT, desc: '都市占領', maxAmmo: 10 },
+    [UNIT_TYPES.APC]:      { name: '装甲車', label: '装', cost: 4000, move: 6, range: [1,1], moveType: MOVETYPE.LAND, desc: '兵士輸送', capacityType: [MOVETYPE.FOOT], maxAmmo: 6 },
+    [UNIT_TYPES.TANK]:     { name: '戦車', label: '戦', cost: 7000, move: 5, range: [1,1], moveType: MOVETYPE.LAND, desc: '主力戦力', maxAmmo: 6 },
+    [UNIT_TYPES.ARTILLERY]:{ name: '自走砲', label: '砲', cost: 8000, move: 4, range: [2,5], moveType: MOVETYPE.LAND, desc: '遠距離', maxAmmo: 5 },
+    [UNIT_TYPES.ANTIAIR]:  { name: '対空砲', label: '空', cost: 4400, move: 5, range: [1,2], moveType: MOVETYPE.LAND, desc: '対空特化', maxAmmo: 6 },
+    [UNIT_TYPES.HELI]:     { name: 'ヘリ', label: 'ヘ', cost: 9000, move: 6, range: [1,1], moveType: MOVETYPE.AIR, desc: '兵士輸送', capacityType: [MOVETYPE.FOOT], maxAmmo: 6 },
+    [UNIT_TYPES.FIGHTER]:  { name: '戦闘機', label: '闘', cost: 20000, move: 9, range: [1,1], moveType: MOVETYPE.AIR, desc: '万能攻撃', maxAmmo: 5 },
+    [UNIT_TYPES.BOMBER]:   { name: '爆撃機', label: '爆', cost: 22000, move: 7, range: [1,1], moveType: MOVETYPE.AIR, desc: '対地最強', maxAmmo: 4 },
+    [UNIT_TYPES.SHIP]:     { name: '戦艦', label: '艦', cost: 28000, move: 5, range: [2,5], moveType: MOVETYPE.SEA, desc: '遠距離', maxAmmo: 5 },
+    [UNIT_TYPES.CARRIER]:  { name: '空母', label: '母', cost: 30000, move: 5, range: [1,1], moveType: MOVETYPE.SEA, desc: '対空', maxAmmo: 5 },
+    [UNIT_TYPES.LANDER]:   { name: '輸送船', label: '輸', cost: 12000, move: 6, range: [0,0], moveType: MOVETYPE.SEA, desc: '輸送', capacityType: [MOVETYPE.LAND, MOVETYPE.FOOT, MOVETYPE.ARTILLERY, MOVETYPE.ANTIAIR], maxAmmo: 0 }
+};
+
+const STAGES = [
+    [
+        [ 2, 2, 3, 3, 10, 1, 3, 3, 2, 2],
+        [ 2, 11, 0, 0, 1, 1, 0, 0, 11, 2],
+        [ 3, 0, 13, 0, 1, 1, 0, 13, 0, 3],
+        [ 3, 0, 0, 0, 1, 1, 0, 0, 0, 3],
+        [ 11, 1, 1, 1, 1, 1, 1, 1, 1, 11],
+        [ 1, 1, 2, 2, 0, 0, 2, 2, 1, 1],
+        [ 1, 1, 2, 2, 0, 0, 2, 2, 1, 1],
+        [ 11, 1, 1, 1, 1, 1, 1, 1, 1, 11],
+        [ 3, 0, 0, 0, 1, 1, 0, 0, 0, 3],
+        [ 3, 0, 13, 0, 1, 1, 0, 13, 0, 3], 
+        [ 2, 11, 0, 0, 1, 1, 0, 0, 11, 2],
+        [ 2, 2, 3, 3, 10, 1, 3, 3, 2, 2],
+    ],
+    // Stage 2
+    [
+        [ 3, 3, 3, 3, 10, 13, 3, 3, 3, 3],
+        [ 3, 11, 0, 2, 1, 1, 2, 0, 11, 3],
+        [ 3, 0, 2, 2, 1, 1, 2, 2, 0, 3],
+        [ 3, 2, 3, 3, 1, 1, 3, 3, 2, 3],
+        [ 14, 4, 4, 1, 1, 1, 1, 4, 4, 14],
+        [ 14, 12, 4, 1, 1, 1, 1, 4, 12, 14],
+        [ 14, 12, 4, 1, 1, 1, 1, 4, 12, 14],
+        [ 14, 4, 4, 1, 1, 1, 1, 4, 4, 14],
+        [ 3, 2, 3, 3, 1, 1, 3, 3, 2, 3],
+        [ 3, 0, 2, 2, 1, 1, 2, 2, 0, 3],
+        [ 3, 11, 0, 2, 1, 1, 2, 0, 11, 3],
+        [ 3, 3, 3, 3, 13, 10, 3, 3, 3, 3],
+    ],
+    // Stage 3
+    [
+        [ 4, 4, 4, 4, 10, 4, 4, 4, 4, 4],
+        [ 4, 12, 0, 13, 11, 11, 13, 0, 12, 4],
+        [ 4, 0, 0, 0, 3, 3, 0, 0, 0, 4],
+        [ 4, 4, 0, 0, 3, 3, 0, 0, 4, 4],
+        [ 14, 4, 4, 4, 4, 4, 4, 4, 4, 14],
+        [ 14, 4, 11, 4, 11, 11, 4, 11, 4, 14],
+        [ 14, 4, 11, 4, 11, 11, 4, 11, 4, 14],
+        [ 14, 4, 4, 4, 4, 4, 4, 4, 4, 14],
+        [ 4, 4, 0, 0, 3, 3, 0, 0, 4, 4],
+        [ 4, 0, 0, 0, 3, 3, 0, 0, 0, 4],
+        [ 4, 12, 0, 13, 11, 11, 13, 0, 12, 4],
+        [ 4, 4, 4, 4, 10, 4, 4, 4, 4, 4],
+    ],
+    // Stage 4
+    [
+        [ 4, 4, 4, 4, 4, 4, 4, 4, 12, 10, 11, 13, 4, 4, 4, 4, 4, 4, 4, 4],
+        [ 4, 4, 4, 4, 4, 4, 4, 12, 0, 0, 0, 0, 12, 4, 4, 4, 4, 4, 4, 4],
+        [ 4, 4, 4, 4, 4, 4, 0, 0, 2, 2, 3, 3, 0, 0, 4, 4, 4, 4, 4, 4],
+        [ 4, 4, 4, 4, 4, 0, 0, 11, 3, 3, 3, 3, 11, 0, 0, 4, 4, 4, 4, 4],
+        [ 4, 4, 4, 4, 0, 0, 2, 2, 3, 3, 3, 3, 2, 2, 0, 0, 4, 4, 4, 4],
+        [ 4, 4, 4, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 4, 4, 4],
+        [ 4, 4, 0, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 0, 4, 4],
+        [ 4, 4, 0, 13, 0, 1, 0, 11, 0, 0, 0, 0, 11, 0, 1, 0, 13, 0, 4, 4],
+        [ 4, 12, 0, 0, 0, 1, 0, 0, 3, 3, 3, 3, 0, 0, 1, 0, 0, 0, 12, 4],
+        [ 4, 4, 4, 4, 4, 1, 4, 4, 4, 4, 4, 4, 4, 4, 1, 4, 4, 4, 4, 4],
+        [ 4, 4, 4, 4, 4, 1, 4, 4, 4, 4, 4, 4, 4, 4, 1, 4, 4, 4, 4, 4],
+        [ 4, 12, 0, 0, 0, 1, 0, 0, 3, 3, 3, 3, 0, 0, 1, 0, 0, 0, 12, 4],
+        [ 4, 4, 0, 13, 0, 1, 0, 11, 0, 0, 0, 0, 11, 0, 1, 0, 13, 0, 4, 4],
+        [ 4, 4, 0, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 0, 4, 4],
+        [ 4, 4, 4, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 4, 4, 4],
+        [ 4, 4, 4, 4, 0, 0, 2, 2, 3, 3, 3, 3, 2, 2, 0, 0, 4, 4, 4, 4],
+        [ 4, 4, 4, 4, 4, 0, 0, 11, 3, 3, 3, 3, 11, 0, 0, 4, 4, 4, 4, 4],
+        [ 4, 4, 4, 4, 4, 4, 0, 0, 2, 2, 3, 3, 0, 0, 4, 4, 4, 4, 4, 4],
+        [ 4, 4, 4, 4, 4, 4, 4, 12, 0, 0, 0, 0, 12, 4, 4, 4, 4, 4, 4, 4],
+        [ 4, 4, 4, 4, 4, 4, 4, 4, 12, 10, 11, 13, 4, 4, 4, 4, 4, 4, 4, 4],
+    ]
+];
+
+class Game {
+    constructor() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.map = [];
+        this.units = [];
+        this.buildings = [];
+        this.effects = []; 
+        this.turn = 0; 
+        this.funds = [0, 0];
+        this.selectedUnit = null;
+        this.selectedTarget = null; 
+        this.state = 'IDLE'; 
+        this.moveRange = [];
+        this.dropRange = [];
+        this.cameraOffset = {x:0, y:0};
+        this.tempUnitState = null;
+        
+        this.isDragging = false;
+        this.dragStartX = 0;
+        this.dragStartY = 0;
+        this.lastOffsetX = 0;
+        this.lastOffsetY = 0;
+        this.dragThreshold = 5; 
+        
+        this.aiStrategy = { mode: 'NORMAL', focus: 'LAND' };
+
+        this.initInput();
+        window.addEventListener('resize', () => this.resize(true));
+        this.resize(false);
+        
+        const loop = () => {
+            this.updateEffects();
+            this.draw();
+            requestAnimationFrame(loop);
+        };
+        loop();
+    }
+
+    resize(draw = true) {
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        this.canvas.width = w;
+        this.canvas.height = h;
+        TILE_SIZE = 50; 
+        this.cameraOffset.x = Math.floor((w - COLS * TILE_SIZE) / 2);
+        this.cameraOffset.y = Math.floor((h - ROWS * TILE_SIZE) / 2);
+        if (COLS * TILE_SIZE > w) this.cameraOffset.x = 20;
+        if (ROWS * TILE_SIZE > h) this.cameraOffset.y = 50;
+    }
+
+    initStage(idx) {
+        this.map = JSON.parse(JSON.stringify(STAGES[idx]));
+        ROWS = this.map.length;
+        COLS = this.map[0].length;
+        this.resize(false);
+
+        this.units = [];
+        this.buildings = [];
+        this.effects = [];
+        this.turn = 0;
+        this.funds = [4000, 4000];
+        this.state = 'IDLE';
+        this.selectedUnit = null;
+        this.selectedTarget = null;
+
+        for(let y=0; y<ROWS; y++) {
+            for(let x=0; x<COLS; x++) {
+                const t = this.map[y][x];
+                if (BUILDING_IDS.includes(t)) {
+                    let owner = -1;
+                    if (y < 3) owner = 1;
+                    else if (y >= ROWS - 3) owner = 0;
+                    if (t === TERRAIN.HQ) owner = (y < ROWS/2) ? 1 : 0;
+                    this.buildings.push({x, y, type: t, owner: owner, capture: 20});
+                }
+            }
+        }
+        this.updateUI();
+    }
+
+    screenToGrid(sx, sy) {
+        const x = Math.floor((sx - this.cameraOffset.x) / TILE_SIZE);
+        const y = Math.floor((sy - this.cameraOffset.y) / TILE_SIZE);
+        if (x >= 0 && x < COLS && y >= 0 && y < ROWS) return {x, y};
+        return null;
+    }
+
+    initInput() {
+        const isMenuOpen = () => {
+            const ids = ['menu-overlay', 'message-overlay', 'production-menu', 'help-modal'];
+            return ids.some(id => {
+                const el = document.getElementById(id);
+                return el.style.display === 'block' || el.style.display === 'flex';
+            });
+        };
+        const isUI = (target) => {
+            return target.tagName === 'BUTTON' || target.closest('button') || 
+                   target.closest('.menu-btn') || target.closest('.action-btn') || 
+                   target.closest('#action-menu');
+        };
+
+        const handleStart = (e) => {
+            if (isMenuOpen()) return;
+            if (isUI(e.target)) return;
+
+            const cx = e.touches ? e.touches[0].clientX : e.clientX;
+            const cy = e.touches ? e.touches[0].clientY : e.clientY;
+
+            this.isDragging = false;
+            this.dragStartX = cx;
+            this.dragStartY = cy;
+            this.lastOffsetX = this.cameraOffset.x;
+            this.lastOffsetY = this.cameraOffset.y;
+        };
+
+        const handleMove = (e) => {
+            if (isMenuOpen()) return;
+            if (this.dragStartX === null) return;
+
+            const cx = e.touches ? e.touches[0].clientX : e.clientX;
+            const cy = e.touches ? e.touches[0].clientY : e.clientY;
+            
+            const dx = cx - this.dragStartX;
+            const dy = cy - this.dragStartY;
+            
+            if (!this.isDragging && (Math.abs(dx) > this.dragThreshold || Math.abs(dy) > this.dragThreshold)) {
+                this.isDragging = true;
+            }
+
+            if (this.isDragging) {
+                this.cameraOffset.x = this.lastOffsetX + dx;
+                this.cameraOffset.y = this.lastOffsetY + dy;
+            }
+        };
+
+        const handleEnd = (e) => {
+            if (isMenuOpen()) return;
+            if (isUI(e.target)) return;
+            
+            if (!this.isDragging) {
+                if (e.cancelable) e.preventDefault();
+                const cx = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+                const cy = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+                if (this.turn === 0) {
+                    const rect = this.canvas.getBoundingClientRect();
+                    const pos = this.screenToGrid(cx - rect.left, cy - rect.top);
+                    if (pos) this.handleClick(pos.x, pos.y);
+                }
+            }
+            this.isDragging = false;
+            this.dragStartX = null;
+            this.dragStartY = null;
+        };
+
+        this.canvas.addEventListener('mousedown', handleStart);
+        window.addEventListener('mousemove', handleMove);
+        window.addEventListener('mouseup', handleEnd);
+        this.canvas.addEventListener('touchstart', handleStart, {passive: false});
+        window.addEventListener('touchmove', handleMove, {passive: false});
+        window.addEventListener('touchend', handleEnd, {passive: false});
+        document.getElementById('end-turn-btn').addEventListener('click', () => this.endTurn());
+    }
+
+    showToast(msg) {
+        const el = document.getElementById('toast-msg');
+        el.innerText = msg;
+        el.style.opacity = 1;
+        if(this.toastTimer) clearTimeout(this.toastTimer);
+        this.toastTimer = setTimeout(() => { el.style.opacity = 0; }, 2000);
+    }
+
+    addDamageEffect(x, y, damage) {
+        this.effects.push({ x: x * TILE_SIZE + TILE_SIZE/2, y: y * TILE_SIZE + TILE_SIZE/2, text: damage.toString(), life: 60, offsetY: 0 });
+    }
+    updateEffects() {
+        this.effects.forEach(e => { e.life--; e.offsetY -= 0.5; });
+        this.effects = this.effects.filter(e => e.life > 0);
+    }
+
+    handleClick(x, y) {
+        const unit = this.units.find(u => u.x === x && u.y === y);
+        const building = this.buildings.find(b => b.x === x && b.y === y);
+
+        if (this.state === 'IDLE') {
+            if (unit && unit.owner === 0 && !unit.finished) {
+                this.selectedUnit = unit;
+                this.tempUnitState = {x: unit.x, y: unit.y}; 
+                this.calcMoveRange(unit);
+                this.state = 'MOVE_SELECT';
+                return;
+            }
+            if (!unit && building && building.owner === 0) {
+                this.openProductionMenu(building);
+                return;
+            }
+        } 
+        else if (this.state === 'MOVE_SELECT') {
+            const valid = this.moveRange.some(p => p.x === x && p.y === y);
+            if (valid) {
+                this.selectedUnit.x = x;
+                this.selectedUnit.y = y;
+                this.state = 'ACTION_SELECT';
+                this.showActionMenu();
+            } else {
+                this.selectedUnit = null;
+                this.state = 'IDLE';
+                this.handleClick(x, y); 
+            }
+        }
+        else if (this.state === 'TARGET_SELECT') {
+            const targets = this.getAttackTargets(this.selectedUnit);
+            const target = targets.find(t => t.x === x && t.y === y);
+            if (target) {
+                this.selectedTarget = target;
+                this.state = 'CONFIRM_ATTACK';
+                document.getElementById('targeting-ui').style.display = 'none';
+                document.getElementById('confirm-attack-ui').style.display = 'flex';
+            }
+        }
+        else if (this.state === 'CONFIRM_ATTACK') {
+             const targets = this.getAttackTargets(this.selectedUnit);
+             const target = targets.find(t => t.x === x && t.y === y);
+             if (target) this.selectedTarget = target;
+        }
+        else if (this.state === 'DROP_SELECT') {
+            const dropPos = this.dropRange.find(p => p.x === x && p.y === y);
+            if (dropPos) {
+                this.executeDrop(dropPos.x, dropPos.y);
+            }
+        }
+    }
+
+    isValidPosition(unit, x, y) {
+        if (x < 0 || x >= COLS || y < 0 || y >= ROWS) return false;
+        const terrain = this.map[y][x];
+        const stats = UNITS[unit.type];
+        
+        if (unit.type === UNIT_TYPES.LANDER) {
+            if (terrain !== TERRAIN.SEA && terrain !== TERRAIN.PORT && terrain !== TERRAIN.SHOAL) return false;
+        }
+        else if (stats.moveType === MOVETYPE.SEA) {
+            if (terrain !== TERRAIN.SEA && terrain !== TERRAIN.PORT) return false;
+        } 
+        else if (stats.moveType === MOVETYPE.LAND || stats.moveType === MOVETYPE.FOOT) {
+            if (terrain === TERRAIN.SEA) return false;
+            if (stats.moveType === MOVETYPE.LAND && terrain === TERRAIN.MOUNTAIN) return false;
+        }
+        
+        const overlap = this.units.find(u => u.x === x && u.y === y && u !== unit);
+        if (overlap) return false;
+
+        return true;
+    }
+
+    canPass(unit, x, y) {
+        if (x < 0 || x >= COLS || y < 0 || y >= ROWS) return false;
+        const terrain = this.map[y][x];
+        const stats = UNITS[unit.type];
+        
+        if (unit.type === UNIT_TYPES.LANDER) {
+            if (terrain !== TERRAIN.SEA && terrain !== TERRAIN.PORT && terrain !== TERRAIN.SHOAL) return false;
+        }
+        else if (stats.moveType === MOVETYPE.SEA) {
+            if (terrain !== TERRAIN.SEA && terrain !== TERRAIN.PORT) return false;
+        } 
+        else if (stats.moveType === MOVETYPE.LAND || stats.moveType === MOVETYPE.FOOT) {
+            if (terrain === TERRAIN.SEA) return false;
+            if (stats.moveType === MOVETYPE.LAND && terrain === TERRAIN.MOUNTAIN) return false;
+        }
+        
+        // Only check if enemy blocks, allow moving through friendly
+        const enemy = this.units.find(u => u.x === x && u.y === y && u.owner !== unit.owner);
+        if (enemy) return false;
+
+        return true;
+    }
+
+    canBoard(unit, transporter) {
+        if (!transporter || transporter.cargo) return false;
+        
+        const transporterStats = UNITS[transporter.type];
+        if (!transporterStats || !transporterStats.capacityType) return false; // Added null check
+        if (!transporterStats.capacityType.includes(UNITS[unit.type].moveType)) return false;
+
+        const tType = this.map[transporter.y][transporter.x];
+        const tCost = TERRAIN_PROPS[tType].cost;
+
+        if (transporter.type === UNIT_TYPES.HELI || transporter.type === UNIT_TYPES.APC) {
+            return tCost === 1;
+        }
+        if (transporter.type === UNIT_TYPES.LANDER) {
+            return tType === TERRAIN.PORT || tType === TERRAIN.SHOAL;
+        }
+        return true;
+    }
+
+    showActionMenu() {
+        const menu = document.getElementById('action-menu');
+        const btnAttack = document.getElementById('act-attack');
+        const btnCapture = document.getElementById('act-capture');
+        const btnBoard = document.getElementById('act-board');
+        const btnDrop = document.getElementById('act-drop');
+        const btnWait = document.getElementById('act-wait');
+        
+        const canStand = this.isValidPosition(this.selectedUnit, this.selectedUnit.x, this.selectedUnit.y);
+        
+        if (canStand) {
+            btnWait.classList.remove('disabled');
+            btnWait.onclick = () => this.uiActionWait();
+        } else {
+            btnWait.classList.add('disabled');
+        }
+
+        const targets = this.getAttackTargets(this.selectedUnit);
+        if (targets.length > 0 && this.selectedUnit.ammo > 0 && canStand) {
+            btnAttack.classList.remove('disabled');
+            btnAttack.onclick = () => this.uiActionAttack();
+        } else {
+            btnAttack.classList.add('disabled');
+        }
+
+        const b = this.buildings.find(bu => bu.x === this.selectedUnit.x && bu.y === this.selectedUnit.y);
+        if (this.selectedUnit.type === UNIT_TYPES.INFANTRY && b && b.owner !== 0 && canStand) {
+            btnCapture.classList.remove('disabled');
+            btnCapture.onclick = () => this.uiActionCapture();
+        } else {
+            btnCapture.classList.add('disabled');
+        }
+
+        const transporter = this.units.find(u => 
+            u.x === this.selectedUnit.x && u.y === this.selectedUnit.y && 
+            u !== this.selectedUnit && u.owner === this.selectedUnit.owner
+        );
+        
+        if (transporter && this.canBoard(this.selectedUnit, transporter)) {
+            btnBoard.classList.remove('disabled');
+            btnBoard.onclick = () => this.uiActionBoard(transporter);
+            btnWait.classList.add('disabled');
+        } else {
+            btnBoard.classList.add('disabled');
+        }
+
+        if (this.selectedUnit.cargo && canStand) {
+            this.calcDropRange(this.selectedUnit);
+            if (this.dropRange.length > 0) {
+                btnDrop.classList.remove('disabled');
+                btnDrop.onclick = () => this.uiActionDrop();
+            } else {
+                btnDrop.classList.add('disabled');
+            }
+        } else {
+            btnDrop.classList.add('disabled');
+        }
+
+        menu.style.display = 'flex';
+    }
+
+    uiActionWait() { this.completeAction(); }
+    uiActionCapture() {
+        const b = this.buildings.find(bu => bu.x === this.selectedUnit.x && bu.y === this.selectedUnit.y);
+        if (b) this.captureBuilding(b, this.selectedUnit);
+        this.completeAction();
+    }
+    uiActionAttack() {
+        this.state = 'TARGET_SELECT';
+        document.getElementById('action-menu').style.display = 'none';
+        document.getElementById('targeting-ui').style.display = 'flex';
+        this.showToast("対象をタップしてください");
+    }
+    uiActionBoard(transporter) {
+        transporter.cargo = this.selectedUnit;
+        this.units = this.units.filter(u => u !== this.selectedUnit);
+        this.selectedUnit = null;
+        this.showToast("搭乗しました");
+        this.completeAction();
+    }
+    uiActionDrop() {
+        this.state = 'DROP_SELECT';
+        document.getElementById('action-menu').style.display = 'none';
+        document.getElementById('drop-ui').style.display = 'flex';
+        this.showToast("降ろす場所をタップしてください");
+    }
+    executeDrop(x, y) {
+        const cargo = this.selectedUnit.cargo;
+        this.selectedUnit.cargo = null;
+        cargo.x = x;
+        cargo.y = y;
+        cargo.finished = true;
+        this.units.push(cargo);
+        this.completeAction();
+        this.showToast("降車しました");
+    }
+
+    uiReturnToActionMenu() {
+        this.state = 'ACTION_SELECT';
+        document.getElementById('targeting-ui').style.display = 'none';
+        document.getElementById('drop-ui').style.display = 'none';
+        this.selectedTarget = null;
+        this.showActionMenu();
+    }
+    uiReturnToTargeting() {
+        this.state = 'TARGET_SELECT';
+        document.getElementById('confirm-attack-ui').style.display = 'none';
+        document.getElementById('targeting-ui').style.display = 'flex';
+        this.selectedTarget = null;
+    }
+    uiConfirmAttack() {
+        if (this.selectedUnit && this.selectedTarget) {
+            this.attackUnit(this.selectedUnit, this.selectedTarget);
+            this.completeAction();
+        }
+    }
+    uiActionCancel() {
+        if (this.selectedUnit && this.tempUnitState) {
+            this.selectedUnit.x = this.tempUnitState.x;
+            this.selectedUnit.y = this.tempUnitState.y;
+        }
+        this.cleanupUI();
+    }
+
+    cleanupUI() {
+        this.selectedUnit = null;
+        this.selectedTarget = null;
+        this.state = 'IDLE';
+        this.tempUnitState = null;
+        document.getElementById('action-menu').style.display = 'none';
+        document.getElementById('confirm-attack-ui').style.display = 'none';
+        document.getElementById('targeting-ui').style.display = 'none';
+        document.getElementById('drop-ui').style.display = 'none';
+    }
+
+    completeAction() {
+        if (this.selectedUnit) {
+            this.selectedUnit.finished = true;
+        }
+        this.cleanupUI();
+        this.checkWinCondition();
+    }
+
+    calcMoveRange(unit) {
+        this.moveRange = [];
+        const stats = UNITS[unit.type];
+        let costs = {};
+        let queue = [{x: unit.x, y: unit.y, cost: 0}];
+        costs[`${unit.x},${unit.y}`] = 0;
+        
+        // include current position for wait option
+        if (this.isValidPosition(unit, unit.x, unit.y)) {
+            this.moveRange.push({x: unit.x, y: unit.y}); 
+        }
+
+        while (queue.length > 0) {
+            queue.sort((a,b) => a.cost - b.cost);
+            const curr = queue.shift();
+            if (curr.cost >= stats.move) continue;
+
+            [[0,1],[0,-1],[1,0],[-1,0]].forEach(([dx, dy]) => {
+                const nx = curr.x + dx, ny = curr.y + dy;
+                if (nx>=0 && nx<COLS && ny>=0 && ny<ROWS) {
+                    let mCost = TERRAIN_PROPS[this.map[ny][nx]].cost;
+                    
+                    // Movement cost logic (same as isValidPosition checks but with cost logic)
+                    if (unit.type === UNIT_TYPES.LANDER) {
+                        if (this.map[ny][nx] !== TERRAIN.SEA && this.map[ny][nx] !== TERRAIN.PORT && this.map[ny][nx] !== TERRAIN.SHOAL) mCost = 999;
+                    } else if (stats.moveType === MOVETYPE.SEA) {
+                         if (this.map[ny][nx] !== TERRAIN.SEA && this.map[ny][nx] !== TERRAIN.PORT) mCost = 999;
+                    }
+                    if ((stats.moveType === MOVETYPE.LAND || stats.moveType === MOVETYPE.FOOT) && this.map[ny][nx] === TERRAIN.SEA) mCost = 999;
+                    if (stats.moveType === MOVETYPE.LAND && this.map[ny][nx] === TERRAIN.MOUNTAIN) mCost = 999;
+                    if (stats.moveType === MOVETYPE.FOOT && this.map[ny][nx] === TERRAIN.MOUNTAIN) mCost = 2;
+                    if (stats.moveType === MOVETYPE.AIR) mCost = 1;
+
+                    // Check if can pass through
+                    if (!this.canPass(unit, nx, ny)) mCost = 999;
+
+                    const friend = this.units.find(u => u.x === nx && u.y === ny && u.owner === unit.owner);
+                    if (friend) {
+                         if (this.canBoard(unit, friend)) mCost = 1;
+                    }
+
+                    const newCost = curr.cost + mCost;
+                    if (newCost <= stats.move) {
+                        const key = `${nx},${ny}`;
+                        if (costs[key] === undefined || newCost < costs[key]) {
+                            costs[key] = newCost;
+                            
+                            let canStay = this.isValidPosition(unit, nx, ny);
+                            if (friend && friend !== unit && this.canBoard(unit, friend)) canStay = true;
+                            
+                            if (canStay) {
+                                // prevent duplicates
+                                if (!this.moveRange.some(p => p.x === nx && p.y === ny)) {
+                                    this.moveRange.push({x: nx, y: ny});
+                                }
+                            }
+                            // Queue for further exploration if path is valid (even if we can't stay)
+                            if (mCost < 999) {
+                                queue.push({x: nx, y: ny, cost: newCost});
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        this.moveRange = Array.from(new Set(this.moveRange.map(JSON.stringify))).map(JSON.parse);
+    }
+
+    calcDropRange(unit) {
+        this.dropRange = [];
+        const cargoStats = UNITS[unit.cargo.type];
+        [[0,1],[0,-1],[1,0],[-1,0]].forEach(([dx, dy]) => {
+            const nx = unit.x + dx;
+            const ny = unit.y + dy;
+            if (nx>=0 && nx<COLS && ny>=0 && ny<ROWS) {
+                const tType = this.map[ny][nx];
+                let validTerrain = true;
+                
+                if (unit.type === UNIT_TYPES.LANDER) {
+                    const currentT = this.map[unit.y][unit.x];
+                    if (currentT !== TERRAIN.PORT && currentT !== TERRAIN.SHOAL) {
+                        validTerrain = false;
+                    }
+                }
+
+                if (validTerrain) {
+                    if ((cargoStats.moveType === MOVETYPE.LAND || cargoStats.moveType === MOVETYPE.FOOT) && tType === TERRAIN.SEA) validTerrain = false;
+                    if (cargoStats.moveType === MOVETYPE.LAND && tType === TERRAIN.MOUNTAIN) validTerrain = false;
+                }
+
+                const other = this.units.find(u => u.x === nx && u.y === ny);
+                if (!other && validTerrain) {
+                    this.dropRange.push({x: nx, y: ny});
+                }
+            }
+        });
+    }
+
+    getAttackTargets(unit) {
+        const stats = UNITS[unit.type];
+        return this.units.filter(t => {
+            if (t.owner === unit.owner) return false;
+            const dist = Math.abs(t.x - unit.x) + Math.abs(t.y - unit.y);
+            if (dist < stats.range[0] || dist > stats.range[1]) return false;
+            if (this.getBaseDamage(unit.type, t.type) === 0) return false;
+            return true;
+        });
+    }
+
+    getBaseDamage(atkType, defType) {
+        if (DMG[atkType] && DMG[atkType][defType] !== undefined) return DMG[atkType][defType];
+        return 10;
+    }
+
+    calcDamage(atk, def) {
+        const baseDmg = this.getBaseDamage(atk.type, def.type);
+        let power = baseDmg * (atk.hp / 100);
+        if (UNITS[def.type].moveType !== MOVETYPE.AIR) {
+            const terrain = this.map[def.y][def.x];
+            const defVal = TERRAIN_PROPS[terrain].defense; 
+            power *= (1.0 - (defVal * 0.1));
+        }
+        power *= (0.95 + Math.random() * 0.1);
+        return Math.floor(power);
+    }
+
+    attackUnit(atk, def) {
+        const dmg = this.calcDamage(atk, def);
+        def.hp = Math.max(0, def.hp - dmg);
+        atk.ammo = Math.max(0, atk.ammo - 1);
+        
+        this.addDamageEffect(def.x, def.y, dmg);
+        
+        if (dmg > 0) {
+            const dist = Math.abs(atk.x - def.x) + Math.abs(atk.y - def.y);
+            if (def.hp > 0 && dist <= 1 && def.ammo > 0) {
+                const defStats = UNITS[def.type];
+                if (dist >= defStats.range[0] && dist <= defStats.range[1] && this.getBaseDamage(def.type, atk.type) > 0) {
+                    const cDmg = this.calcDamage(def, atk);
+                    atk.hp = Math.max(0, atk.hp - cDmg);
+                    def.ammo = Math.max(0, def.ammo - 1);
+                    this.addDamageEffect(atk.x, atk.y, cDmg);
+                }
+            }
+        }
+        this.units = this.units.filter(u => u.hp > 0);
+    }
+
+    captureBuilding(b, u) {
+        const power = Math.ceil(u.hp / 10);
+        b.capture -= power;
+        this.showToast(`占領中... 残り${Math.max(0, b.capture)}`);
+        if (b.capture <= 0) {
+            b.owner = u.owner;
+            b.capture = 20;
+            this.showToast("占領完了！");
+        }
+    }
+
+    openProductionMenu(b) {
+        const menu = document.getElementById('production-menu');
+        const list = document.getElementById('unit-list');
+        list.innerHTML = '';
+        
+        let types = [];
+        if ([TERRAIN.CITY, TERRAIN.HQ].includes(b.type)) types = [UNIT_TYPES.INFANTRY, UNIT_TYPES.APC, UNIT_TYPES.TANK, UNIT_TYPES.ARTILLERY, UNIT_TYPES.ANTIAIR];
+        if (b.type === TERRAIN.AIRPORT) types = [UNIT_TYPES.HELI, UNIT_TYPES.FIGHTER, UNIT_TYPES.BOMBER];
+        if (b.type === TERRAIN.PORT) types = [UNIT_TYPES.SHIP, UNIT_TYPES.LANDER];
+
+        if (types.length === 0) {
+            this.showToast("ここでは生産できません");
+            return;
+        }
+
+        types.forEach(t => {
+            const u = UNITS[t];
+            const btn = document.createElement('div');
+            btn.className = 'unit-prod-btn';
+            const canBuy = this.funds[0] >= u.cost;
+            btn.style.opacity = canBuy ? 1.0 : 0.5;
+            btn.innerHTML = `<b>${u.name}</b><span>¥${u.cost}</span><span class="unit-desc">${u.desc}</span>`;
+            btn.onclick = () => {
+                if (canBuy) {
+                    this.funds[0] -= u.cost;
+                    const newU = {type: t, owner: 0, x: b.x, y: b.y, hp: 100, finished: true};
+                    newU.ammo = UNITS[t].maxAmmo;
+                    this.units.push(newU);
+                    closeProduction();
+                    this.updateUI();
+                } else {
+                    this.showToast("資金が足りません");
+                }
+            };
+            list.appendChild(btn);
+        });
+        document.getElementById('prod-bg').style.display = 'block';
+        menu.style.display = 'block';
+    }
+
+    endTurn() {
+        this.turn = (this.turn + 1) % 2;
+        
+        if (this.turn === 1) {
+            const blueCount = this.units.filter(u => u.owner === 0).length;
+            const redCount = this.units.filter(u => u.owner === 1).length;
+            
+            this.aiStrategy.mode = 'NORMAL';
+            if (redCount >= blueCount - 1 && Math.random() > 0.3) this.aiStrategy.mode = 'SAVING'; 
+            if (redCount < 3) this.aiStrategy.mode = 'RUSH'; 
+
+            const r = Math.random();
+            if (r < 0.5) this.aiStrategy.focus = 'LAND';
+            else if (r < 0.8) this.aiStrategy.focus = 'AIR';
+            else this.aiStrategy.focus = 'SEA';
+        }
+
+        this.units.forEach(u => {
+            if (u.owner === this.turn) {
+                u.finished = false;
+                const b = this.buildings.find(build => build.x === u.x && build.y === u.y);
+                if (b && b.owner === u.owner) {
+                    const uStats = UNITS[u.type];
+                    let canResupply = false;
+                    if ((uStats.moveType === MOVETYPE.LAND || uStats.moveType === MOVETYPE.FOOT) && (b.type === TERRAIN.CITY || b.type === TERRAIN.HQ)) canResupply = true;
+                    if (uStats.moveType === MOVETYPE.AIR && b.type === TERRAIN.AIRPORT) canResupply = true;
+                    if (uStats.moveType === MOVETYPE.SEA && b.type === TERRAIN.PORT) canResupply = true;
+
+                    if (canResupply) {
+                        u.ammo = uStats.maxAmmo;
+                        if (u.hp < 100) {
+                            const cost = Math.floor(uStats.cost * 0.1);
+                            if(this.funds[this.turn] >= cost) {
+                                this.funds[this.turn] -= cost;
+                                u.hp = Math.min(100, u.hp + 20);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        const income = this.buildings.filter(b => b.owner === this.turn).length * 1000;
+        this.funds[this.turn] += income;
+
+        this.updateUI();
+        this.cleanupUI();
+
+        if (this.turn === 1) {
+            document.getElementById('end-turn-btn').style.display = 'none';
+            this.showToast("CPUのターン");
+            setTimeout(() => this.cpuTurn(), 800);
+        } else {
+            document.getElementById('end-turn-btn').style.display = 'block';
+            this.showToast("あなたのターン");
+        }
+    }
+
+    // --- CPU Logic ---
+    async cpuTurn() {
+        try {
+            const myUnits = this.units.filter(u => u.owner === 1 && !u.finished);
+            const enemies = this.units.filter(u => u.owner === 0);
+            const hasAirEnemies = enemies.some(u => [UNIT_TYPES.HELI, UNIT_TYPES.FIGHTER, UNIT_TYPES.BOMBER].includes(u.type));
+
+            for (let unit of myUnits) {
+                if (!this.units.includes(unit)) continue;
+
+                const targetBuilding = this.findNearestBuilding(unit, [0, -1]); 
+                const enemyHQ = this.buildings.find(b => b.type === TERRAIN.HQ && b.owner === 0);
+                
+                this.calcMoveRange(unit);
+                let bestMove = null;
+                let bestScore = -99999;
+                let bestAction = 'WAIT'; 
+
+                const isInfantry = (unit.type === UNIT_TYPES.INFANTRY);
+                const isTransporter = (UNITS[unit.type].capacityType !== undefined);
+                const hasCargo = !!unit.cargo;
+                const outOfAmmo = unit.ammo === 0;
+
+                if (this.moveRange.length === 0 && this.isValidPosition(unit, unit.x, unit.y)) {
+                    this.moveRange.push({x: unit.x, y: unit.y});
+                }
+
+                for (let m of this.moveRange) {
+                    // 移動先が「待機可能」または「搭乗可能」でない場合、AIは選択しない
+                    if (!hasCargo && !this.isValidPosition(unit, m.x, m.y)) {
+                        const transporter = this.units.find(u => u.x === m.x && u.y === m.y && u.owner === 1 && u !== unit);
+                        if (!transporter || !this.canBoard(unit, transporter)) continue;
+                    }
+
+                    let score = 0;
+                    let action = 'WAIT';
+
+                    const transporter = this.units.find(u => u.x === m.x && u.y === m.y && u.owner === 1 && u !== unit);
+                    let canBoardTarget = transporter && this.canBoard(unit, transporter);
+                    
+                    // 味方がいるマスに、搭乗目的以外で移動（待機）しようとすると不正になるので除外
+                    // ただし搭乗可能な場合はOK
+                    if (transporter && !canBoardTarget) {
+                        // 味方の上にいる状態。これは通常ありえないが、もし候補に入ってしまっていたら除外
+                        continue;
+                    }
+
+                    if (canBoardTarget) {
+                        const distToTarget = targetBuilding ? (Math.abs(m.x - targetBuilding.x) + Math.abs(m.y - targetBuilding.y)) : 99;
+                        if (distToTarget > 5) { 
+                            score += 1500;
+                            action = 'BOARD';
+                        }
+                    }
+
+                    if (outOfAmmo) {
+                        const nearestSupply = this.findNearestSupply(unit);
+                        if (nearestSupply) {
+                            const dist = Math.abs(m.x - nearestSupply.x) + Math.abs(m.y - nearestSupply.y);
+                            score -= dist * 100;
+                        }
+                    } else {
+                        const attackableTargets = enemies.filter(e => {
+                            const dist = Math.abs(e.x - m.x) + Math.abs(e.y - m.y);
+                            const range = UNITS[unit.type].range;
+                            return dist >= range[0] && dist <= range[1] && this.getBaseDamage(unit.type, e.type) > 0;
+                        });
+
+                        if (attackableTargets.length > 0) {
+                            score += 100;
+                            let maxDmg = 0;
+                            attackableTargets.forEach(t => {
+                                let dmg = this.getBaseDamage(unit.type, t.type);
+                                if (t.hp < dmg) dmg += 50; 
+                                if (dmg > maxDmg) maxDmg = dmg;
+                            });
+                            score += maxDmg;
+                            action = 'ATTACK';
+                        }
+
+                        if (isInfantry && !action.match(/ATTACK/)) {
+                            const b = this.buildings.find(bu => bu.x === m.x && bu.y === m.y);
+                            if (b && b.owner !== 1) {
+                                score += 2000; 
+                                if (b.type === TERRAIN.HQ) score += 5000;
+                                action = 'CAPTURE';
+                            }
+                        }
+
+                        if (isTransporter && hasCargo) {
+                            if (targetBuilding) {
+                                const dist = Math.abs(m.x - targetBuilding.x) + Math.abs(m.y - targetBuilding.y);
+                                if (dist <= 1) {
+                                    score += 3000; 
+                                    action = 'DROP_READY'; 
+                                } else {
+                                    score -= dist * 10; 
+                                }
+                            }
+                        }
+
+                        if (isTransporter && !hasCargo) {
+                            const freeInfantry = this.units.find(u => u.owner === 1 && u.type === UNIT_TYPES.INFANTRY && !u.finished);
+                            if (freeInfantry) {
+                                const dist = Math.abs(m.x - freeInfantry.x) + Math.abs(m.y - freeInfantry.y);
+                                score -= dist * 5; 
+                            }
+                        }
+
+                        if (unit.type === UNIT_TYPES.ARTILLERY || unit.type === UNIT_TYPES.ANTIAIR) {
+                            let tooClose = false;
+                            enemies.forEach(e => {
+                                if (Math.abs(e.x - m.x) + Math.abs(e.y - m.y) <= 1) tooClose = true;
+                            });
+                            if (tooClose) score -= 500;
+                        }
+
+                        let dest = enemyHQ || targetBuilding;
+                        if (dest) {
+                            const dist = Math.abs(m.x - dest.x) + Math.abs(m.y - dest.y);
+                            score -= dist * 2;
+                        }
+                    }
+
+                    // 味方重複チェック (ActionがBOARDでない場合、移動先に味方がいたらNG)
+                    // moveRangeには味方通過可能マスが含まれるが、最終地点としてはNGな場合がある
+                    // calcMoveRangeではじいているはずだが、念の為
+                    if (action !== 'BOARD') {
+                        const overlap = this.units.find(u => u.x === m.x && u.y === m.y && u !== unit);
+                        if (overlap) continue; 
+                    }
+
+                    score += Math.random() * 20;
+
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMove = m;
+                        bestAction = action;
+                    }
+                }
+
+                if (bestMove) {
+                    unit.x = bestMove.x;
+                    unit.y = bestMove.y;
+                    await new Promise(r => setTimeout(r, 150));
+
+                    if (bestAction === 'BOARD') {
+                        const transporter = this.units.find(u => u.x === unit.x && u.y === unit.y && u !== unit);
+                        if (transporter) {
+                            transporter.cargo = unit;
+                            this.units = this.units.filter(u => u !== unit); 
+                            this.draw();
+                            continue; 
+                        }
+                    }
+
+                    if (bestAction === 'DROP_READY' || (isTransporter && hasCargo)) {
+                        this.calcDropRange(unit);
+                        if (this.dropRange.length > 0) {
+                            const dropPos = this.dropRange[0]; 
+                            this.executeDropAI(unit, dropPos.x, dropPos.y);
+                            await new Promise(r => setTimeout(r, 150));
+                        }
+                    }
+
+                    if (bestAction === 'CAPTURE' || (unit.type === UNIT_TYPES.INFANTRY)) {
+                        const b = this.buildings.find(bu => bu.x === unit.x && bu.y === unit.y);
+                        if (b && b.owner !== 1) {
+                            this.captureBuilding(b, unit);
+                        }
+                    }
+
+                    if (bestAction === 'ATTACK' && unit.ammo > 0) {
+                        const targets = this.getAttackTargets(unit);
+                        if (targets.length > 0) {
+                            targets.sort((a,b) => a.hp - b.hp); 
+                            this.attackUnit(unit, targets[0]);
+                        }
+                    }
+
+                    this.checkWinCondition();
+                    this.draw();
+                    await new Promise(r => setTimeout(r, 100));
+                }
+                unit.finished = true;
+            }
+
+            await this.cpuProduction(hasAirEnemies);
+        } catch(e) {
+            console.error(e);
+        } finally {
+            this.endTurn();
+        }
+    }
+
+    findNearestBuilding(unit, owners) {
+        let nearest = null;
+        let minDist = 999;
+        this.buildings.forEach(b => {
+            if (owners.includes(b.owner)) {
+                const dist = Math.abs(unit.x - b.x) + Math.abs(unit.y - b.y);
+                if (dist < minDist) {
+                    minDist = dist;
+                    nearest = b;
+                }
+            }
+        });
+        return nearest;
+    }
+
+    findNearestSupply(unit) {
+        let nearest = null;
+        let minDist = 999;
+        const uStats = UNITS[unit.type];
+        this.buildings.forEach(b => {
+            if (b.owner === unit.owner) {
+                let compatible = false;
+                if ((uStats.moveType === MOVETYPE.LAND || uStats.moveType === MOVETYPE.FOOT) && (b.type === TERRAIN.CITY || b.type === TERRAIN.HQ)) compatible = true;
+                if (uStats.moveType === MOVETYPE.AIR && b.type === TERRAIN.AIRPORT) compatible = true;
+                if (uStats.moveType === MOVETYPE.SEA && b.type === TERRAIN.PORT) compatible = true;
+                
+                if (compatible) {
+                    const dist = Math.abs(unit.x - b.x) + Math.abs(unit.y - b.y);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        nearest = b;
+                    }
+                }
+            }
+        });
+        return nearest;
+    }
+
+    executeDropAI(unit, x, y) {
+        const cargo = unit.cargo;
+        unit.cargo = null;
+        cargo.x = x;
+        cargo.y = y;
+        cargo.finished = true;
+        this.units.push(cargo);
+    }
+
+    async cpuProduction(hasAirEnemies) {
+        const factories = this.buildings.filter(b => b.owner === 1 && !this.units.find(u => u.x === b.x && u.y === b.y));
+        
+        for (let b of factories) {
+            if (this.aiStrategy.mode === 'SAVING' && this.funds[1] < 20000) continue; 
+
+            let candidates = [];
+            if ([TERRAIN.CITY, TERRAIN.HQ].includes(b.type)) {
+                if (this.aiStrategy.focus === 'LAND' || Math.random() > 0.5) {
+                    candidates.push(UNIT_TYPES.TANK, UNIT_TYPES.ARTILLERY, UNIT_TYPES.APC);
+                    if (hasAirEnemies) candidates.push(UNIT_TYPES.ANTIAIR); 
+                }
+                candidates.push(UNIT_TYPES.INFANTRY); 
+            }
+            if (b.type === TERRAIN.AIRPORT) {
+                if (this.funds[1] > 20000) candidates.push(UNIT_TYPES.BOMBER, UNIT_TYPES.FIGHTER);
+                candidates.push(UNIT_TYPES.HELI);
+            }
+            if (b.type === TERRAIN.PORT) {
+                if (this.funds[1] > 25000) candidates.push(UNIT_TYPES.SHIP);
+                candidates.push(UNIT_TYPES.LANDER);
+            }
+
+            candidates = candidates.filter(t => UNITS[t].cost <= this.funds[1]);
+            
+            if (candidates.length > 0) {
+                candidates.sort((a,b) => UNITS[b].cost - UNITS[a].cost);
+                const pickIdx = Math.floor(Math.random() * Math.ceil(candidates.length / 2));
+                const type = candidates[pickIdx];
+
+                this.funds[1] -= UNITS[type].cost;
+                const newU = {type: type, owner: 1, x: b.x, y: b.y, hp: 100, finished: true};
+                newU.ammo = UNITS[type].maxAmmo;
+                this.units.push(newU);
+                this.updateUI();
+                this.draw();
+                await new Promise(r => setTimeout(r, 100));
+            }
+        }
+    }
+
+    checkWinCondition() {
+        const blueHQ = this.buildings.find(b => b.type === TERRAIN.HQ && b.owner === 0);
+        const redHQ = this.buildings.find(b => b.type === TERRAIN.HQ && b.owner === 1);
+        let winner = null;
+        
+        if (!blueHQ) winner = 'CPU (赤軍)';
+        if (!redHQ) winner = 'YOU (青軍)';
+        
+        if (winner) {
+            document.getElementById('message-text').innerText = `${winner} の勝利！`;
+            document.getElementById('message-overlay').style.display = 'flex';
+            document.getElementById('end-turn-btn').style.display = 'none';
+            this.turn = -1; 
+        }
+    }
+
+    updateUI() {
+        document.getElementById('info-panel').style.display = 'block';
+        document.getElementById('info-panel').innerHTML = `
+            <div style="color:#48f;font-weight:bold">青軍: ¥${this.funds[0]}</div>
+            <div style="color:#f44;">赤軍: ¥${this.funds[1]}</div>
+            <div style="margin-top:4px;font-size:11px;">${this.turn === 0 ? 'あなたのターン' : 'CPU思考中'}</div>
+        `;
+    }
+
+    draw() {
+        if (!this.map.length) return;
+        this.ctx.fillStyle = '#222';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.save();
+        this.ctx.translate(this.cameraOffset.x, this.cameraOffset.y);
+        
+        this.map.forEach((row, y) => row.forEach((t, x) => this.drawTile(x, y, t)));
+        this.buildings.forEach(b => this.drawBuilding(b));
+        
+        if (this.state === 'MOVE_SELECT') {
+            this.ctx.fillStyle = 'rgba(255,255,255,0.4)';
+            this.moveRange.forEach(p => this.ctx.fillRect(p.x*TILE_SIZE+2, p.y*TILE_SIZE+2, TILE_SIZE-4, TILE_SIZE-4));
+        }
+        if (this.state === 'DROP_SELECT') {
+            this.ctx.fillStyle = 'rgba(0,255,255,0.4)';
+            this.dropRange.forEach(p => this.ctx.fillRect(p.x*TILE_SIZE+2, p.y*TILE_SIZE+2, TILE_SIZE-4, TILE_SIZE-4));
+        }
+        if (this.state === 'TARGET_SELECT' || this.state === 'CONFIRM_ATTACK') {
+            const targets = this.getAttackTargets(this.selectedUnit);
+            const time = Date.now() / 200;
+            targets.forEach(t => {
+                this.ctx.strokeStyle = `rgba(255, 0, 0, ${Math.abs(Math.sin(time)) + 0.5})`;
+                this.ctx.lineWidth = 3;
+                this.ctx.strokeRect(t.x*TILE_SIZE, t.y*TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            });
+            if (this.selectedTarget) {
+                this.ctx.strokeStyle = '#ff0000';
+                this.ctx.lineWidth = 5;
+                this.ctx.strokeRect(this.selectedTarget.x*TILE_SIZE, this.selectedTarget.y*TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            }
+        }
+        
+        this.units.forEach(u => this.drawUnit(u));
+        if (this.selectedUnit) {
+            this.ctx.strokeStyle = 'yellow';
+            this.ctx.lineWidth = 3;
+            this.ctx.strokeRect(this.selectedUnit.x*TILE_SIZE, this.selectedUnit.y*TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        }
+
+        this.ctx.fillStyle = '#fff';
+        this.ctx.font = 'bold 20px sans-serif';
+        this.ctx.textAlign = 'center';
+        this.ctx.shadowColor = 'black';
+        this.ctx.shadowBlur = 4;
+        this.effects.forEach(e => {
+            this.ctx.fillText(e.text, e.x, e.y + e.offsetY);
+        });
+        this.ctx.shadowBlur = 0;
+        this.ctx.restore();
+    }
+
+    drawTile(x, y, t) {
+        const p = TERRAIN_PROPS[t];
+        this.ctx.fillStyle = p.color;
+        this.ctx.fillRect(x*TILE_SIZE, y*TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        this.ctx.strokeStyle = 'rgba(0,0,0,0.05)';
+        this.ctx.lineWidth = 1;
+        this.ctx.strokeRect(x*TILE_SIZE, y*TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        if(t===TERRAIN.MOUNTAIN) {
+            this.ctx.fillStyle='rgba(0,0,0,0.3)'; this.ctx.beginPath(); 
+            this.ctx.moveTo(x*TILE_SIZE+TILE_SIZE/2, y*TILE_SIZE+5);
+            this.ctx.lineTo(x*TILE_SIZE+5, y*TILE_SIZE+TILE_SIZE-5);
+            this.ctx.lineTo(x*TILE_SIZE+TILE_SIZE-5, y*TILE_SIZE+TILE_SIZE-5); this.ctx.fill();
+        }
+        if(t===TERRAIN.FOREST) {
+            this.ctx.fillStyle='rgba(0,50,0,0.2)'; this.ctx.beginPath();
+            this.ctx.arc(x*TILE_SIZE+TILE_SIZE/2, y*TILE_SIZE+TILE_SIZE/2, TILE_SIZE/3, 0, Math.PI*2); this.ctx.fill();
+        }
+    }
+
+    drawBuilding(b) {
+        const c = b.owner === 0 ? '#48f' : (b.owner === 1 ? '#f44' : '#888');
+        const x = b.x*TILE_SIZE, y = b.y*TILE_SIZE;
+        this.ctx.fillStyle = 'rgba(0,0,0,0.5)'; this.ctx.fillRect(x+6, y+16, TILE_SIZE-12, TILE_SIZE-20);
+        this.ctx.fillStyle = c; this.ctx.fillRect(x+4, y+14, TILE_SIZE-8, TILE_SIZE-18);
+        this.ctx.fillStyle = '#fff'; this.ctx.font = `bold ${Math.floor(TILE_SIZE/2)}px sans-serif`;
+        this.ctx.textAlign = 'center';
+        let s = '〒'; 
+        if(b.type===TERRAIN.HQ) { s='★'; this.ctx.fillStyle = '#ffed00'; }
+        if(b.type===TERRAIN.AIRPORT) s='✈'; if(b.type===TERRAIN.PORT) s='⚓';
+        this.ctx.fillText(s, x+TILE_SIZE/2, y+TILE_SIZE-5);
+        if(b.capture<20) {
+            this.ctx.fillStyle='#333'; this.ctx.fillRect(x+2,y,TILE_SIZE-4,4);
+            this.ctx.fillStyle='#0f0'; this.ctx.fillRect(x+2,y,(TILE_SIZE-4)*(b.capture/20),4);
+        }
+    }
+
+    drawUnit(u) {
+        const x = u.x*TILE_SIZE, y = u.y*TILE_SIZE;
+        let baseColor;
+        if (u.owner === 0) baseColor = u.finished ? '#236' : '#48f';
+        else baseColor = u.finished ? '#622' : '#f44';
+        
+        this.ctx.fillStyle = baseColor;
+        this.ctx.beginPath(); this.ctx.arc(x+TILE_SIZE/2, y+TILE_SIZE/2, TILE_SIZE/2-3, 0, Math.PI*2); this.ctx.fill();
+        this.ctx.strokeStyle='#fff'; this.ctx.lineWidth=2; this.ctx.stroke();
+        this.ctx.fillStyle='#fff'; this.ctx.font=`bold ${Math.floor(TILE_SIZE/2.5)}px sans-serif`;
+        this.ctx.textAlign='center'; this.ctx.textBaseline='middle';
+        this.ctx.fillText(UNITS[u.type].label, x+TILE_SIZE/2, y+TILE_SIZE/2);
+        
+        const hpPct = u.hp / 100;
+        this.ctx.fillStyle = 'red';
+        this.ctx.fillRect(x+2, y+TILE_SIZE-6, TILE_SIZE-4, 4);
+        this.ctx.fillStyle = hpPct > 0.5 ? '#0f0' : '#ff0';
+        this.ctx.fillRect(x+2, y+TILE_SIZE-6, (TILE_SIZE-4)*hpPct, 4);
+
+        // 弾数表示
+        this.ctx.fillStyle = '#80f';
+        this.ctx.fillRect(x+1, y+1, 16, 12);
+        this.ctx.fillStyle = '#fff';
+        this.ctx.font = '11px monospace';
+        this.ctx.fillText(u.ammo, x+9, y+7);
+
+        if (u.cargo) {
+            this.ctx.fillStyle = '#a0f'; // Purple
+            this.ctx.beginPath();
+            this.ctx.arc(x+TILE_SIZE-6, y+6, 4, 0, Math.PI*2);
+            this.ctx.fill();
+        }
+    }
+}
+
+let game;
+window.startGame = (i) => {
+    document.getElementById('menu-overlay').style.display='none';
+    if(!game) game = new Game();
+    game.initStage(i);
+    document.getElementById('end-turn-btn').style.display='block';
+};
+window.closeProduction = () => {
+    document.getElementById('prod-bg').style.display='none';
+    document.getElementById('production-menu').style.display='none';
+};
+window.toggleHelp = () => {
+    const m = document.getElementById('help-modal');
+    const b = document.getElementById('help-bg');
+    const s = m.style.display === 'block' ? 'none' : 'block';
+    m.style.display = s; b.style.display = s;
+};
+window.resetGame = () => location.reload();
+</script>
+</body>
+</html>
