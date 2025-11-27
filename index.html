@@ -3,24 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>戦略シミュレーション (AI搭乗強化版)</title>
+    <title>戦略シミュレーション (所属設定版)</title>
     <style>
         body {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            background-color: #222;
+            margin: 0; padding: 0; overflow: hidden; background-color: #222;
             font-family: 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
-            touch-action: none;
-            -webkit-user-select: none;
-            user-select: none;
+            touch-action: none; -webkit-user-select: none; user-select: none;
             -webkit-tap-highlight-color: transparent;
         }
-        canvas {
-            display: block;
-            margin: 0 auto;
-            background-color: #000;
-        }
+        canvas { display: block; margin: 0 auto; background-color: #000; }
         #ui-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; z-index: 10;
@@ -49,7 +40,6 @@
             font-size: 14px; pointer-events: none; opacity: 0; transition: opacity 0.3s;
             z-index: 300; text-align: center; width: max-content; max-width: 90%;
         }
-        
         .overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.85); z-index: 100; display: none;
@@ -78,11 +68,11 @@
         .action-btn.disabled { background: #ccc; color: #888; pointer-events: none; box-shadow: none; opacity: 0.7; display: none; }
         .action-icon { font-size: 18px; margin-bottom: 2px; }
 
-        #targeting-ui, #drop-ui {
+        #targeting-ui, #drop-ui, #react-ui {
             position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
             display: none; pointer-events: auto; z-index: 55; flex-direction: column; align-items: center;
         }
-        #confirm-attack-ui {
+        #confirm-attack-ui, #confirm-react-ui {
             position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
             display: none; pointer-events: auto; z-index: 60; flex-direction: column; align-items: center;
         }
@@ -93,6 +83,13 @@
             box-shadow: 0 4px 0 #800; cursor: pointer;
         }
         #fire-btn:active { transform: translateY(4px); box-shadow: none; }
+        #react-btn {
+            background: #28a745; color: white; border: 2px solid #fff;
+            width: 120px; height: 50px; border-radius: 25px; font-size: 18px; font-weight: bold;
+            box-shadow: 0 4px 0 #1e7e34; cursor: pointer;
+        }
+        #react-btn:active { transform: translateY(4px); box-shadow: none; }
+
         .cancel-btn-small {
             background: #fff; color: #333; border: 2px solid #888; width: 80px; height: 50px;
             border-radius: 25px; font-size: 14px; font-weight: bold; box-shadow: 0 4px 0 #555; cursor: pointer;
@@ -144,6 +141,7 @@
     <div id="action-menu">
         <button id="act-attack" class="action-btn" onclick="game.uiActionAttack()"><span class="action-icon">⚔️</span>攻撃</button>
         <button id="act-capture" class="action-btn" onclick="game.uiActionCapture()"><span class="action-icon">🏳️</span>占領</button>
+        <button id="act-react" class="action-btn" onclick="game.uiActionReact()"><span class="action-icon">🔄</span>再行動</button>
         <button id="act-board" class="action-btn" onclick="game.uiActionBoard()"><span class="action-icon">🚪</span>搭乗</button>
         <button id="act-drop" class="action-btn" onclick="game.uiActionDrop()"><span class="action-icon">📦</span>降車</button>
         <button id="act-wait" class="action-btn" onclick="game.uiActionWait()"><span class="action-icon">🛑</span>待機</button>
@@ -152,6 +150,11 @@
 
     <div id="targeting-ui">
         <div style="color:white; margin-bottom:10px; font-weight:bold; text-shadow:1px 1px 0 #000;">攻撃対象を選択</div>
+        <button class="cancel-btn-small" onclick="game.uiReturnToActionMenu()">戻る</button>
+    </div>
+
+    <div id="react-ui">
+        <div style="color:white; margin-bottom:10px; font-weight:bold; text-shadow:1px 1px 0 #000;">再行動させる味方を選択</div>
         <button class="cancel-btn-small" onclick="game.uiReturnToActionMenu()">戻る</button>
     </div>
 
@@ -167,16 +170,25 @@
         </div>
         <div style="text-align:center; color:white; margin-top:5px; font-weight:bold; text-shadow:1px 1px 0 #000;">対象をタップして変更</div>
     </div>
+
+    <div id="confirm-react-ui">
+        <div class="fire-btn-group">
+            <button class="cancel-btn-small" onclick="game.uiReturnToReact()">戻る</button>
+            <button id="react-btn" onclick="game.uiConfirmReact()">再行動！</button>
+        </div>
+        <div style="text-align:center; color:white; margin-top:5px; font-weight:bold; text-shadow:1px 1px 0 #000;">対象をタップして変更</div>
+    </div>
 </div>
 
 <div id="menu-overlay" class="overlay" style="display:flex;">
     <h1 style="margin-bottom:10px; text-shadow: 2px 2px 0 #000;">WAR SIMULATION</h1>
-    <p style="font-size:14px; color:#ccc; margin-bottom:30px;">AI搭乗・連携アップデート</p>
+    <p style="font-size:14px; color:#ccc; margin-bottom:30px;">ステージ 1 ~ 4 は Gemini 作成　その他は自分でぶち込んだ</p>
     <div id="stage-select">
         <button class="menu-btn" onclick="startGame(0)">ステージ 1 (地上戦)</button>
         <button class="menu-btn" onclick="startGame(1)">ステージ 2 (空港追加)</button>
         <button class="menu-btn" onclick="startGame(2)">ステージ 3 (海空戦)</button>
         <button class="menu-btn" style="background:#e67e22;" onclick="startGame(3)">ステージ 4 (巨大マップ)</button>
+        <button class="menu-btn" style="background:#049628;" onclick="startGame(4)">ステージ 5 (ソラマメ)</button>
     </div>
 </div>
 
@@ -194,11 +206,11 @@
 
 <div id="help-bg" class="bg-cover" onclick="toggleHelp()"></div>
 <div id="help-modal">
-    <h3>AIアップデート</h3>
-    <p>CPUが輸送ユニットを活用するようになりました。</p>
+    <h3>かあちゃんたちにはないしょだぞ～</h3>
     <ul>
-        <li><strong>連携:</strong> 歩兵は積極的に輸送機に乗ろうとし、輸送機は歩兵を迎えに行きます。</li>
-        <li><strong>ルール修正:</strong> 海上のヘリを歩兵が通過できなくなりました。</li>
+        <li><strong>所属設定:</strong> コード内の <code>AFFILIATION</code> 配列で各建物の所属を自由に設定可能になりました。</li>
+        <li>プレイヤー（青軍）とCPU（赤軍）が戦うターン制の戦略シミュレーションゲームです。ユニットを生産・指揮して、敵の本拠地を占領させれば勝利です！</li>
+        <a>aaaa</a>
     </ul>
     <button class="menu-btn" style="width:100%; margin:10px 0 0 0; padding:10px;" onclick="toggleHelp()">閉じる</button>
 </div>
@@ -224,44 +236,47 @@ const TERRAIN_PROPS = {
     [TERRAIN.CITY]:  { color: '#bbb', cost: 1, defense: 3 },
     [TERRAIN.PORT]:  { color: '#48d', cost: 1, defense: 2 },     
     [TERRAIN.AIRPORT]:{ color: '#999', cost: 1, defense: 2 },
-    [TERRAIN.SHOAL]: { color: '#f6e58d', cost: 1, defense: 0 } 
+    [TERRAIN.SHOAL]: { color: '#ffeaa7', cost: 1, defense: 0 } 
 };
 
 const UNIT_TYPES = {
-    INFANTRY: 'infantry', APC: 'apc', TANK: 'tank', ARTILLERY: 'artillery', ANTIAIR: 'antiair',
+    INFANTRY: 'infantry', APC: 'apc', TANK: 'tank', ARTILLERY: 'artillery', ANTIAIR: 'antiair', SUPPLY: 'supply',
     HELI: 'heli', FIGHTER: 'fighter', BOMBER: 'bomber', SHIP: 'ship', CARRIER: 'carrier', LANDER: 'lander'
 };
 const MOVETYPE = { LAND: 0, AIR: 1, SEA: 2, FOOT: 3 };
 
 const DMG = {
-    [UNIT_TYPES.INFANTRY]: { [UNIT_TYPES.INFANTRY]: 55, [UNIT_TYPES.APC]: 15, [UNIT_TYPES.TANK]: 5,  [UNIT_TYPES.ARTILLERY]: 15, [UNIT_TYPES.ANTIAIR]: 15, [UNIT_TYPES.HELI]: 10, [UNIT_TYPES.BOMBER]: 0, [UNIT_TYPES.FIGHTER]: 0, [UNIT_TYPES.LANDER]: 0 },
-    [UNIT_TYPES.APC]:      { [UNIT_TYPES.INFANTRY]: 75, [UNIT_TYPES.APC]: 50, [UNIT_TYPES.TANK]: 15, [UNIT_TYPES.ARTILLERY]: 50, [UNIT_TYPES.ANTIAIR]: 50, [UNIT_TYPES.HELI]: 40, [UNIT_TYPES.BOMBER]: 0, [UNIT_TYPES.FIGHTER]: 0, [UNIT_TYPES.LANDER]: 0 },
-    [UNIT_TYPES.TANK]:     { [UNIT_TYPES.INFANTRY]: 80, [UNIT_TYPES.APC]: 85, [UNIT_TYPES.TANK]: 55, [UNIT_TYPES.ARTILLERY]: 75, [UNIT_TYPES.ANTIAIR]: 75, [UNIT_TYPES.HELI]: 15, [UNIT_TYPES.BOMBER]: 0, [UNIT_TYPES.FIGHTER]: 0, [UNIT_TYPES.SHIP]: 10, [UNIT_TYPES.LANDER]: 55 },
-    [UNIT_TYPES.ARTILLERY]:{ [UNIT_TYPES.INFANTRY]: 45, [UNIT_TYPES.APC]: 70, [UNIT_TYPES.TANK]: 70, [UNIT_TYPES.ARTILLERY]: 75, [UNIT_TYPES.ANTIAIR]: 75, [UNIT_TYPES.HELI]: 0, [UNIT_TYPES.BOMBER]: 0, [UNIT_TYPES.FIGHTER]: 0, [UNIT_TYPES.SHIP]: 40, [UNIT_TYPES.LANDER]: 60 },
-    [UNIT_TYPES.ANTIAIR]:  { [UNIT_TYPES.INFANTRY]: 0, [UNIT_TYPES.APC]: 0, [UNIT_TYPES.TANK]: 0, [UNIT_TYPES.ARTILLERY]: 0, [UNIT_TYPES.ANTIAIR]: 0, [UNIT_TYPES.HELI]: 110, [UNIT_TYPES.BOMBER]: 85, [UNIT_TYPES.FIGHTER]: 75, [UNIT_TYPES.SHIP]: 0, [UNIT_TYPES.LANDER]: 0 },
-    [UNIT_TYPES.HELI]:     { [UNIT_TYPES.INFANTRY]: 95, [UNIT_TYPES.APC]: 65, [UNIT_TYPES.TANK]: 35, [UNIT_TYPES.ARTILLERY]: 65, [UNIT_TYPES.ANTIAIR]: 40, [UNIT_TYPES.HELI]: 65, [UNIT_TYPES.BOMBER]: 20, [UNIT_TYPES.FIGHTER]: 20, [UNIT_TYPES.SHIP]: 25, [UNIT_TYPES.LANDER]: 45 },
-    [UNIT_TYPES.FIGHTER]:  { [UNIT_TYPES.INFANTRY]: 60, [UNIT_TYPES.APC]: 50, [UNIT_TYPES.TANK]: 25, [UNIT_TYPES.ARTILLERY]: 30, [UNIT_TYPES.ANTIAIR]: 30, [UNIT_TYPES.HELI]: 100, [UNIT_TYPES.BOMBER]: 100, [UNIT_TYPES.FIGHTER]: 55, [UNIT_TYPES.SHIP]: 20, [UNIT_TYPES.LANDER]: 40 },
-    [UNIT_TYPES.BOMBER]:   { [UNIT_TYPES.INFANTRY]: 110, [UNIT_TYPES.APC]: 110, [UNIT_TYPES.TANK]: 105, [UNIT_TYPES.ARTILLERY]: 110, [UNIT_TYPES.ANTIAIR]: 105, [UNIT_TYPES.HELI]: 0, [UNIT_TYPES.BOMBER]: 0, [UNIT_TYPES.FIGHTER]: 0, [UNIT_TYPES.SHIP]: 85, [UNIT_TYPES.CARRIER]: 105, [UNIT_TYPES.LANDER]: 105 },
-    [UNIT_TYPES.SHIP]:     { [UNIT_TYPES.INFANTRY]: 85, [UNIT_TYPES.APC]: 80, [UNIT_TYPES.TANK]: 80, [UNIT_TYPES.ARTILLERY]: 80, [UNIT_TYPES.ANTIAIR]: 80, [UNIT_TYPES.HELI]: 85, [UNIT_TYPES.BOMBER]: 85, [UNIT_TYPES.FIGHTER]: 85, [UNIT_TYPES.SHIP]: 55, [UNIT_TYPES.CARRIER]: 60, [UNIT_TYPES.LANDER]: 95 },
-    [UNIT_TYPES.CARRIER]:  { [UNIT_TYPES.INFANTRY]: 0, [UNIT_TYPES.APC]: 0, [UNIT_TYPES.TANK]: 0, [UNIT_TYPES.ARTILLERY]: 0, [UNIT_TYPES.ANTIAIR]: 0, [UNIT_TYPES.HELI]: 100, [UNIT_TYPES.BOMBER]: 100, [UNIT_TYPES.FIGHTER]: 80, [UNIT_TYPES.SHIP]: 0, [UNIT_TYPES.LANDER]: 0 },
-    [UNIT_TYPES.LANDER]:   { [UNIT_TYPES.INFANTRY]: 0, [UNIT_TYPES.APC]: 0, [UNIT_TYPES.TANK]: 0, [UNIT_TYPES.ARTILLERY]: 0, [UNIT_TYPES.ANTIAIR]: 0, [UNIT_TYPES.HELI]: 0, [UNIT_TYPES.BOMBER]: 0, [UNIT_TYPES.FIGHTER]: 0, [UNIT_TYPES.SHIP]: 0, [UNIT_TYPES.LANDER]: 0 }
+    [UNIT_TYPES.INFANTRY]: { [UNIT_TYPES.INFANTRY]: 55, [UNIT_TYPES.APC]: 15, [UNIT_TYPES.TANK]: 5,  [UNIT_TYPES.ARTILLERY]: 15, [UNIT_TYPES.ANTIAIR]: 15, [UNIT_TYPES.SUPPLY]: 15, [UNIT_TYPES.HELI]: 10, [UNIT_TYPES.BOMBER]: 0, [UNIT_TYPES.FIGHTER]: 0, [UNIT_TYPES.LANDER]: 0 },
+    [UNIT_TYPES.APC]:      { [UNIT_TYPES.INFANTRY]: 75, [UNIT_TYPES.APC]: 50, [UNIT_TYPES.TANK]: 15, [UNIT_TYPES.ARTILLERY]: 50, [UNIT_TYPES.ANTIAIR]: 50, [UNIT_TYPES.SUPPLY]: 55, [UNIT_TYPES.HELI]: 40, [UNIT_TYPES.BOMBER]: 0, [UNIT_TYPES.FIGHTER]: 0, [UNIT_TYPES.LANDER]: 0 },
+    [UNIT_TYPES.TANK]:     { [UNIT_TYPES.INFANTRY]: 80, [UNIT_TYPES.APC]: 85, [UNIT_TYPES.TANK]: 55, [UNIT_TYPES.ARTILLERY]: 75, [UNIT_TYPES.ANTIAIR]: 75, [UNIT_TYPES.SUPPLY]: 85, [UNIT_TYPES.HELI]: 15, [UNIT_TYPES.BOMBER]: 0, [UNIT_TYPES.FIGHTER]: 0, [UNIT_TYPES.SHIP]: 10, [UNIT_TYPES.LANDER]: 55 },
+    [UNIT_TYPES.ARTILLERY]:{ [UNIT_TYPES.INFANTRY]: 45, [UNIT_TYPES.APC]: 70, [UNIT_TYPES.TANK]: 70, [UNIT_TYPES.ARTILLERY]: 75, [UNIT_TYPES.ANTIAIR]: 75, [UNIT_TYPES.SUPPLY]: 75, [UNIT_TYPES.HELI]: 0, [UNIT_TYPES.BOMBER]: 0, [UNIT_TYPES.FIGHTER]: 0, [UNIT_TYPES.SHIP]: 40, [UNIT_TYPES.LANDER]: 60 },
+    [UNIT_TYPES.ANTIAIR]:  { [UNIT_TYPES.INFANTRY]: 0, [UNIT_TYPES.APC]: 0, [UNIT_TYPES.TANK]: 0, [UNIT_TYPES.ARTILLERY]: 0, [UNIT_TYPES.ANTIAIR]: 0, [UNIT_TYPES.SUPPLY]: 0, [UNIT_TYPES.HELI]: 110, [UNIT_TYPES.BOMBER]: 85, [UNIT_TYPES.FIGHTER]: 75, [UNIT_TYPES.SHIP]: 0, [UNIT_TYPES.LANDER]: 0 },
+    [UNIT_TYPES.SUPPLY]:   { [UNIT_TYPES.INFANTRY]: 0, [UNIT_TYPES.APC]: 0, [UNIT_TYPES.TANK]: 0, [UNIT_TYPES.ARTILLERY]: 0, [UNIT_TYPES.ANTIAIR]: 0, [UNIT_TYPES.SUPPLY]: 0, [UNIT_TYPES.HELI]: 0, [UNIT_TYPES.BOMBER]: 0, [UNIT_TYPES.FIGHTER]: 0, [UNIT_TYPES.SHIP]: 0, [UNIT_TYPES.LANDER]: 0 },
+    [UNIT_TYPES.HELI]:     { [UNIT_TYPES.INFANTRY]: 90, [UNIT_TYPES.APC]: 60, [UNIT_TYPES.TANK]: 30, [UNIT_TYPES.ARTILLERY]: 60, [UNIT_TYPES.ANTIAIR]: 35, [UNIT_TYPES.SUPPLY]: 60, [UNIT_TYPES.HELI]: 60, [UNIT_TYPES.BOMBER]: 15, [UNIT_TYPES.FIGHTER]: 15, [UNIT_TYPES.SHIP]: 20, [UNIT_TYPES.LANDER]: 40 },
+    [UNIT_TYPES.FIGHTER]:  { [UNIT_TYPES.INFANTRY]: 60, [UNIT_TYPES.APC]: 50, [UNIT_TYPES.TANK]: 25, [UNIT_TYPES.ARTILLERY]: 30, [UNIT_TYPES.ANTIAIR]: 30, [UNIT_TYPES.SUPPLY]: 30, [UNIT_TYPES.HELI]: 100, [UNIT_TYPES.BOMBER]: 100, [UNIT_TYPES.FIGHTER]: 55, [UNIT_TYPES.SHIP]: 20, [UNIT_TYPES.LANDER]: 40 },
+    [UNIT_TYPES.BOMBER]:   { [UNIT_TYPES.INFANTRY]: 110, [UNIT_TYPES.APC]: 110, [UNIT_TYPES.TANK]: 105, [UNIT_TYPES.ARTILLERY]: 110, [UNIT_TYPES.ANTIAIR]: 105, [UNIT_TYPES.SUPPLY]: 110, [UNIT_TYPES.HELI]: 0, [UNIT_TYPES.BOMBER]: 0, [UNIT_TYPES.FIGHTER]: 0, [UNIT_TYPES.SHIP]: 85, [UNIT_TYPES.CARRIER]: 105, [UNIT_TYPES.LANDER]: 105 },
+    [UNIT_TYPES.SHIP]:     { [UNIT_TYPES.INFANTRY]: 85, [UNIT_TYPES.APC]: 80, [UNIT_TYPES.TANK]: 80, [UNIT_TYPES.ARTILLERY]: 80, [UNIT_TYPES.ANTIAIR]: 80, [UNIT_TYPES.SUPPLY]: 80, [UNIT_TYPES.HELI]: 85, [UNIT_TYPES.BOMBER]: 85, [UNIT_TYPES.FIGHTER]: 85, [UNIT_TYPES.SHIP]: 55, [UNIT_TYPES.CARRIER]: 60, [UNIT_TYPES.LANDER]: 95 },
+    [UNIT_TYPES.CARRIER]:  { [UNIT_TYPES.INFANTRY]: 0, [UNIT_TYPES.APC]: 0, [UNIT_TYPES.TANK]: 0, [UNIT_TYPES.ARTILLERY]: 0, [UNIT_TYPES.ANTIAIR]: 0, [UNIT_TYPES.SUPPLY]: 0, [UNIT_TYPES.HELI]: 100, [UNIT_TYPES.BOMBER]: 100, [UNIT_TYPES.FIGHTER]: 80, [UNIT_TYPES.SHIP]: 0, [UNIT_TYPES.LANDER]: 0 },
+    [UNIT_TYPES.LANDER]:   { [UNIT_TYPES.INFANTRY]: 0, [UNIT_TYPES.APC]: 0, [UNIT_TYPES.TANK]: 0, [UNIT_TYPES.ARTILLERY]: 0, [UNIT_TYPES.ANTIAIR]: 0, [UNIT_TYPES.SUPPLY]: 0, [UNIT_TYPES.HELI]: 0, [UNIT_TYPES.BOMBER]: 0, [UNIT_TYPES.FIGHTER]: 0, [UNIT_TYPES.SHIP]: 0, [UNIT_TYPES.LANDER]: 0 }
 };
 
 const UNITS = {
     [UNIT_TYPES.INFANTRY]: { name: '兵士', label: '歩', cost: 1000, move: 3, range: [1,1], moveType: MOVETYPE.FOOT, desc: '都市占領', maxAmmo: 10 },
     [UNIT_TYPES.APC]:      { name: '装甲車', label: '装', cost: 4000, move: 6, range: [1,1], moveType: MOVETYPE.LAND, desc: '兵士輸送', capacityType: [MOVETYPE.FOOT], maxAmmo: 6 },
-    [UNIT_TYPES.TANK]:     { name: '戦車', label: '戦', cost: 7000, move: 5, range: [1,1], moveType: MOVETYPE.LAND, desc: '主力戦力', maxAmmo: 6 },
-    [UNIT_TYPES.ARTILLERY]:{ name: '自走砲', label: '砲', cost: 8000, move: 4, range: [2,5], moveType: MOVETYPE.LAND, desc: '遠距離', maxAmmo: 5 },
-    [UNIT_TYPES.ANTIAIR]:  { name: '対空砲', label: '空', cost: 4400, move: 5, range: [1,2], moveType: MOVETYPE.LAND, desc: '対空特化', maxAmmo: 6 },
-    [UNIT_TYPES.HELI]:     { name: 'ヘリ', label: 'ヘ', cost: 9000, move: 6, range: [1,1], moveType: MOVETYPE.AIR, desc: '兵士輸送', capacityType: [MOVETYPE.FOOT], maxAmmo: 6 },
-    [UNIT_TYPES.FIGHTER]:  { name: '戦闘機', label: '闘', cost: 20000, move: 9, range: [1,1], moveType: MOVETYPE.AIR, desc: '万能攻撃', maxAmmo: 5 },
+    [UNIT_TYPES.TANK]:     { name: '戦車', label: '戦', cost: 10000, move: 5, range: [1,1], moveType: MOVETYPE.LAND, desc: '主力戦力', maxAmmo: 5 },
+    [UNIT_TYPES.ARTILLERY]:{ name: '自走砲', label: '砲', cost: 11000, move: 4, range: [2,5], moveType: MOVETYPE.LAND, desc: '遠距離2~5(移動時攻撃不可)', maxAmmo: 4 },
+    [UNIT_TYPES.ANTIAIR]:  { name: '対空砲', label: '空', cost: 4400, move: 5, range: [1,2], moveType: MOVETYPE.LAND, desc: '対空のみ・1~2遠距離', maxAmmo: 5 },
+    [UNIT_TYPES.SUPPLY]:   { name: '補給車', label: '補', cost: 7000, move: 5, range: [0,0], moveType: MOVETYPE.LAND, desc: '再行動・隣の弾薬補給', maxAmmo: 2 },
+    [UNIT_TYPES.HELI]:     { name: 'ヘリ', label: 'ヘ', cost: 5300, move: 6, range: [1,1], moveType: MOVETYPE.AIR, desc: '兵士輸送', capacityType: [MOVETYPE.FOOT], maxAmmo: 5 },
+    [UNIT_TYPES.FIGHTER]:  { name: '戦闘機', label: '闘', cost: 20000, move: 9, range: [1,1], moveType: MOVETYPE.AIR, desc: '空特攻・地上も攻撃', maxAmmo: 5 },
     [UNIT_TYPES.BOMBER]:   { name: '爆撃機', label: '爆', cost: 22000, move: 7, range: [1,1], moveType: MOVETYPE.AIR, desc: '対地最強', maxAmmo: 4 },
-    [UNIT_TYPES.SHIP]:     { name: '戦艦', label: '艦', cost: 28000, move: 5, range: [2,5], moveType: MOVETYPE.SEA, desc: '遠距離', maxAmmo: 5 },
+    [UNIT_TYPES.SHIP]:     { name: '戦艦', label: '艦', cost: 28000, move: 5, range: [2,5], moveType: MOVETYPE.SEA, desc: '遠距離2~5万能', maxAmmo: 5 },
     [UNIT_TYPES.CARRIER]:  { name: '空母', label: '母', cost: 30000, move: 5, range: [1,1], moveType: MOVETYPE.SEA, desc: '対空', maxAmmo: 5 },
-    [UNIT_TYPES.LANDER]:   { name: '輸送船', label: '輸', cost: 12000, move: 6, range: [0,0], moveType: MOVETYPE.SEA, desc: '輸送', capacityType: [MOVETYPE.LAND, MOVETYPE.FOOT, MOVETYPE.ARTILLERY, MOVETYPE.ANTIAIR], maxAmmo: 0 }
+    [UNIT_TYPES.LANDER]:   { name: '輸送船', label: '輸', cost: 12000, move: 6, range: [0,0], moveType: MOVETYPE.SEA, desc: '輸送', capacityType: [MOVETYPE.LAND, MOVETYPE.FOOT, MOVETYPE.ARTILLERY, MOVETYPE.ANTIAIR, MOVETYPE.SUPPLY], maxAmmo: 0 }
 };
 
 const STAGES = [
+    // Stage 1
     [
         [ 2, 2, 3, 3, 10, 1, 3, 3, 2, 2],
         [ 2, 11, 0, 0, 1, 1, 0, 0, 11, 2],
@@ -322,12 +337,121 @@ const STAGES = [
         [ 4, 12, 0, 0, 0, 1, 0, 0, 3, 3, 3, 3, 0, 0, 1, 0, 0, 0, 12, 4],
         [ 4, 4, 0, 13, 0, 1, 0, 11, 0, 0, 0, 0, 11, 0, 1, 0, 13, 0, 4, 4],
         [ 4, 4, 0, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 0, 4, 4],
-        [ 4, 4, 4, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 4, 4, 4],
+        [ 4, 4, 4, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 4, 4, 4],
         [ 4, 4, 4, 4, 0, 0, 2, 2, 3, 3, 3, 3, 2, 2, 0, 0, 4, 4, 4, 4],
         [ 4, 4, 4, 4, 4, 0, 0, 11, 3, 3, 3, 3, 11, 0, 0, 4, 4, 4, 4, 4],
         [ 4, 4, 4, 4, 4, 4, 0, 0, 2, 2, 3, 3, 0, 0, 4, 4, 4, 4, 4, 4],
         [ 4, 4, 4, 4, 4, 4, 4, 12, 0, 0, 0, 0, 12, 4, 4, 4, 4, 4, 4, 4],
         [ 4, 4, 4, 4, 4, 4, 4, 4, 12, 10, 11, 13, 4, 4, 4, 4, 4, 4, 4, 4],
+    ],
+    // Stage 5 ソラマメ
+    //PLAIN: 0, ROAD: 1, FOREST: 2, MOUNTAIN: 3, SEA: 4,
+    //HQ: 10, CITY: 11, PORT: 12, AIRPORT: 13
+    [
+        [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4],
+        [4,4,4,4,4,4,0,0,4,4,0,3,4,4,4,4],
+        [4,4,0,0,3,2,2,2,2,2,2,3,3,0,4,4],
+        [4,0,0,3,3,0,0,0,0,0,0,3,3,0,0,4],
+        [4,11,11,3,3,11,11,11,11,11,11,3,3,11,11,4],
+        [4,0,0,0,3,1,1,1,1,1,1,3,0,0,0,4],
+        [4,11,0,11,3,1,0,3,3,0,1,3,11,0,11,4],
+        [4,10,11,1,3,1,11,3,3,11,1,3,1,11,10,4],
+        [4,11,2,1,3,1,0,3,3,0,1,3,1,2,11,4],
+        [4,0,0,1,1,1,11,3,3,11,1,1,1,0,0,4],
+        [4,11,11,0,2,2,3,3,3,3,2,2,2,11,11,4],
+        [4,4,4,0,0,0,0,0,4,0,0,0,3,0,4,4],
+        [4,4,4,4,0,0,4,4,4,4,4,0,4,4,4,4],
+        [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4],
+        [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4],
+    ]
+];
+
+const AFFILIATION = [
+    // Stage 1
+    [
+        [ 0, 0, 0, 0, 2, 0, 0, 0, 0, 0],
+        [ 0, 2, 0, 0, 0, 0, 0, 0, 2, 0],
+        [ 0, 0, 2, 0, 0, 0, 0, 2, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 1, 0, 0, 0, 0, 1, 0, 0], 
+        [ 0, 1, 0, 0, 0, 0, 0, 0, 1, 0],
+        [ 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+    ],
+    // Stage 2
+    [
+        [ 0, 0, 0, 0, 2, 2, 0, 0, 0, 0],
+        [ 0, 2, 0, 0, 0, 0, 0, 0, 2, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 1, 0, 0, 0, 0, 0, 0, 1, 0],
+        [ 0, 0, 0, 0, 1, 1, 0, 0, 0, 0],
+    ],
+    // Stage 3
+    [
+        [ 0, 0, 0, 0, 2, 0, 0, 0, 0, 0],
+        [ 0, 2, 0, 2, 2, 2, 2, 0, 2, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 1, 0, 1, 1, 1, 1, 0, 1, 0],
+        [ 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+    ],
+    // Stage 4
+    [
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+    ],
+    // Stage 5 ソラマメ
+    [
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,2,0,0,0,0,0,0,0,0,0,0,0,0,1,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,2,0,0,0,0,0,0,0,0,0,0,0,0,1,0],
+        [0,2,2,0,0,0,0,0,0,0,0,0,0,1,1,0],
+        [0,2,0,0,0,0,0,0,0,0,0,0,0,0,1,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,2,0,0,0,0,0,0,0,0,0,0,0,0,1,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
     ]
 ];
 
@@ -370,6 +494,7 @@ class Game {
         loop();
     }
 
+    // ... existing code ...
     resize(draw = true) {
         const w = window.innerWidth;
         const h = window.innerHeight;
@@ -384,6 +509,7 @@ class Game {
 
     initStage(idx) {
         this.map = JSON.parse(JSON.stringify(STAGES[idx]));
+        const aff = AFFILIATION[idx];
         ROWS = this.map.length;
         COLS = this.map[0].length;
         this.resize(false);
@@ -400,18 +526,35 @@ class Game {
         for(let y=0; y<ROWS; y++) {
             for(let x=0; x<COLS; x++) {
                 const t = this.map[y][x];
+                const ownerVal = aff[y][x];
+                
+                // Error Check 1: Invalid affiliation value
+                if (ownerVal !== 0 && ownerVal !== 1 && ownerVal !== 2) {
+                    alert(`Error in AFFILIATION data at Stage ${idx+1} (${x},${y}): Invalid value ${ownerVal}. Must be 0, 1, or 2.`);
+                    console.error(`Invalid affiliation value ${ownerVal} at ${x},${y}`);
+                    return;
+                }
+
+                // Building logic
                 if (BUILDING_IDS.includes(t)) {
                     let owner = -1;
-                    if (y < 3) owner = 1;
-                    else if (y >= ROWS - 3) owner = 0;
-                    if (t === TERRAIN.HQ) owner = (y < ROWS/2) ? 1 : 0;
+                    if (ownerVal === 1) owner = 0; // Blue
+                    if (ownerVal === 2) owner = 1; // Red
+                    
                     this.buildings.push({x, y, type: t, owner: owner, capture: 20});
+                } else {
+                    // Error Check 2: Affiliation assigned to non-building
+                    if (ownerVal !== 0) {
+                        alert(`Error in AFFILIATION data at Stage ${idx+1} (${x},${y}): Non-building terrain cannot have affiliation.`);
+                        console.error(`Affiliation assigned to non-building terrain type ${t} at ${x},${y}`);
+                        return;
+                    }
                 }
             }
         }
         this.updateUI();
     }
-
+    // ... existing code ...
     screenToGrid(sx, sy) {
         const x = Math.floor((sx - this.cameraOffset.x) / TILE_SIZE);
         const y = Math.floor((sy - this.cameraOffset.y) / TILE_SIZE);
@@ -529,6 +672,7 @@ class Game {
             }
         } 
         else if (this.state === 'MOVE_SELECT') {
+            // 移動可能範囲リストに (x,y) が含まれているか
             const valid = this.moveRange.some(p => p.x === x && p.y === y);
             if (valid) {
                 this.selectedUnit.x = x;
@@ -556,6 +700,21 @@ class Game {
              const target = targets.find(t => t.x === x && t.y === y);
              if (target) this.selectedTarget = target;
         }
+        else if (this.state === 'REACT_SELECT') {
+            const targets = this.getReactTargets(this.selectedUnit);
+            const target = targets.find(t => t.x === x && t.y === y);
+            if (target) {
+                this.selectedTarget = target;
+                this.state = 'CONFIRM_REACT';
+                document.getElementById('react-ui').style.display = 'none';
+                document.getElementById('confirm-react-ui').style.display = 'flex';
+            }
+        }
+        else if (this.state === 'CONFIRM_REACT') {
+             const targets = this.getReactTargets(this.selectedUnit);
+             const target = targets.find(t => t.x === x && t.y === y);
+             if (target) this.selectedTarget = target;
+        }
         else if (this.state === 'DROP_SELECT') {
             const dropPos = this.dropRange.find(p => p.x === x && p.y === y);
             if (dropPos) {
@@ -569,10 +728,12 @@ class Game {
         const terrain = this.map[y][x];
         const stats = UNITS[unit.type];
         
+        // 輸送船: SEA, PORT, SHOAL
         if (unit.type === UNIT_TYPES.LANDER) {
             if (terrain !== TERRAIN.SEA && terrain !== TERRAIN.PORT && terrain !== TERRAIN.SHOAL) return false;
         }
         else if (stats.moveType === MOVETYPE.SEA) {
+            // 戦艦等: SEA, PORT
             if (terrain !== TERRAIN.SEA && terrain !== TERRAIN.PORT) return false;
         } 
         else if (stats.moveType === MOVETYPE.LAND || stats.moveType === MOVETYPE.FOOT) {
@@ -602,7 +763,6 @@ class Game {
             if (stats.moveType === MOVETYPE.LAND && terrain === TERRAIN.MOUNTAIN) return false;
         }
         
-        // Only check if enemy blocks, allow moving through friendly
         const enemy = this.units.find(u => u.x === x && u.y === y && u.owner !== unit.owner);
         if (enemy) return false;
 
@@ -611,10 +771,9 @@ class Game {
 
     canBoard(unit, transporter) {
         if (!transporter || transporter.cargo) return false;
-        
-        const transporterStats = UNITS[transporter.type];
-        if (!transporterStats || !transporterStats.capacityType) return false; // Added null check
-        if (!transporterStats.capacityType.includes(UNITS[unit.type].moveType)) return false;
+        const tStats = UNITS[transporter.type];
+        if (!tStats || !tStats.capacityType) return false; 
+        if (!tStats.capacityType.includes(UNITS[unit.type].moveType)) return false;
 
         const tType = this.map[transporter.y][transporter.x];
         const tCost = TERRAIN_PROPS[tType].cost;
@@ -628,14 +787,33 @@ class Game {
         return true;
     }
 
+    getReactTargets(unit) {
+        // Adjacent, Same Owner, Land Unit, Finished, Not Supply Truck
+        const targets = [];
+        [[0,1],[0,-1],[1,0],[-1,0]].forEach(([dx, dy]) => {
+            const nx = unit.x + dx;
+            const ny = unit.y + dy;
+            const t = this.units.find(u => u.x === nx && u.y === ny);
+            if (t && t.owner === unit.owner && t.finished && t !== unit && t.type !== UNIT_TYPES.SUPPLY) {
+                const tStats = UNITS[t.type];
+                if (tStats.moveType === MOVETYPE.LAND || tStats.moveType === MOVETYPE.FOOT) {
+                    targets.push(t);
+                }
+            }
+        });
+        return targets;
+    }
+
     showActionMenu() {
         const menu = document.getElementById('action-menu');
         const btnAttack = document.getElementById('act-attack');
         const btnCapture = document.getElementById('act-capture');
         const btnBoard = document.getElementById('act-board');
         const btnDrop = document.getElementById('act-drop');
+        const btnReact = document.getElementById('act-react');
         const btnWait = document.getElementById('act-wait');
         
+        // 現在地が有効かチェック
         const canStand = this.isValidPosition(this.selectedUnit, this.selectedUnit.x, this.selectedUnit.y);
         
         if (canStand) {
@@ -646,9 +824,17 @@ class Game {
         }
 
         const targets = this.getAttackTargets(this.selectedUnit);
+        // 自走砲移動後攻撃不可チェック
+        const moved = (this.selectedUnit.x !== this.tempUnitState.x || this.selectedUnit.y !== this.tempUnitState.y);
+        const isArtillery = (this.selectedUnit.type === UNIT_TYPES.ARTILLERY);
+
         if (targets.length > 0 && this.selectedUnit.ammo > 0 && canStand) {
-            btnAttack.classList.remove('disabled');
-            btnAttack.onclick = () => this.uiActionAttack();
+            if (isArtillery && moved) {
+                btnAttack.classList.add('disabled');
+            } else {
+                btnAttack.classList.remove('disabled');
+                btnAttack.onclick = () => this.uiActionAttack();
+            }
         } else {
             btnAttack.classList.add('disabled');
         }
@@ -684,6 +870,15 @@ class Game {
             }
         } else {
             btnDrop.classList.add('disabled');
+        }
+
+        // Re-act
+        const reactTargets = this.getReactTargets(this.selectedUnit);
+        if (this.selectedUnit.type === UNIT_TYPES.SUPPLY && this.selectedUnit.ammo > 0 && reactTargets.length > 0 && canStand) {
+            btnReact.classList.remove('disabled');
+            btnReact.onclick = () => this.uiActionReact();
+        } else {
+            btnReact.classList.add('disabled');
         }
 
         menu.style.display = 'flex';
@@ -724,11 +919,18 @@ class Game {
         this.completeAction();
         this.showToast("降車しました");
     }
+    uiActionReact() {
+        this.state = 'REACT_SELECT';
+        document.getElementById('action-menu').style.display = 'none';
+        document.getElementById('react-ui').style.display = 'flex';
+        this.showToast("再行動させる味方を選択");
+    }
 
     uiReturnToActionMenu() {
         this.state = 'ACTION_SELECT';
         document.getElementById('targeting-ui').style.display = 'none';
         document.getElementById('drop-ui').style.display = 'none';
+        document.getElementById('react-ui').style.display = 'none';
         this.selectedTarget = null;
         this.showActionMenu();
     }
@@ -738,12 +940,28 @@ class Game {
         document.getElementById('targeting-ui').style.display = 'flex';
         this.selectedTarget = null;
     }
+    uiReturnToReact() {
+        this.state = 'REACT_SELECT';
+        document.getElementById('confirm-react-ui').style.display = 'none';
+        document.getElementById('react-ui').style.display = 'flex';
+        this.selectedTarget = null;
+    }
+
     uiConfirmAttack() {
         if (this.selectedUnit && this.selectedTarget) {
             this.attackUnit(this.selectedUnit, this.selectedTarget);
             this.completeAction();
         }
     }
+    uiConfirmReact() {
+        if (this.selectedUnit && this.selectedTarget) {
+            this.selectedTarget.finished = false;
+            this.selectedUnit.ammo--;
+            this.showToast("再行動！");
+            this.completeAction();
+        }
+    }
+
     uiActionCancel() {
         if (this.selectedUnit && this.tempUnitState) {
             this.selectedUnit.x = this.tempUnitState.x;
@@ -761,6 +979,8 @@ class Game {
         document.getElementById('confirm-attack-ui').style.display = 'none';
         document.getElementById('targeting-ui').style.display = 'none';
         document.getElementById('drop-ui').style.display = 'none';
+        document.getElementById('react-ui').style.display = 'none';
+        document.getElementById('confirm-react-ui').style.display = 'none';
     }
 
     completeAction() {
@@ -778,10 +998,8 @@ class Game {
         let queue = [{x: unit.x, y: unit.y, cost: 0}];
         costs[`${unit.x},${unit.y}`] = 0;
         
-        // include current position for wait option
-        if (this.isValidPosition(unit, unit.x, unit.y)) {
-            this.moveRange.push({x: unit.x, y: unit.y}); 
-        }
+        // 現在地は常に移動候補に含める (待機のため)
+        this.moveRange.push({x: unit.x, y: unit.y}); 
 
         while (queue.length > 0) {
             queue.sort((a,b) => a.cost - b.cost);
@@ -792,19 +1010,19 @@ class Game {
                 const nx = curr.x + dx, ny = curr.y + dy;
                 if (nx>=0 && nx<COLS && ny>=0 && ny<ROWS) {
                     let mCost = TERRAIN_PROPS[this.map[ny][nx]].cost;
+                    const tType = this.map[ny][nx];
                     
-                    // Movement cost logic (same as isValidPosition checks but with cost logic)
+                    // 移動コスト計算 (侵入不可判定)
                     if (unit.type === UNIT_TYPES.LANDER) {
-                        if (this.map[ny][nx] !== TERRAIN.SEA && this.map[ny][nx] !== TERRAIN.PORT && this.map[ny][nx] !== TERRAIN.SHOAL) mCost = 999;
+                        if (tType !== TERRAIN.SEA && tType !== TERRAIN.PORT && tType !== TERRAIN.SHOAL) mCost = 999;
                     } else if (stats.moveType === MOVETYPE.SEA) {
-                         if (this.map[ny][nx] !== TERRAIN.SEA && this.map[ny][nx] !== TERRAIN.PORT) mCost = 999;
+                         if (tType !== TERRAIN.SEA && tType !== TERRAIN.PORT) mCost = 999;
                     }
-                    if ((stats.moveType === MOVETYPE.LAND || stats.moveType === MOVETYPE.FOOT) && this.map[ny][nx] === TERRAIN.SEA) mCost = 999;
-                    if (stats.moveType === MOVETYPE.LAND && this.map[ny][nx] === TERRAIN.MOUNTAIN) mCost = 999;
-                    if (stats.moveType === MOVETYPE.FOOT && this.map[ny][nx] === TERRAIN.MOUNTAIN) mCost = 2;
+                    if ((stats.moveType === MOVETYPE.LAND || stats.moveType === MOVETYPE.FOOT) && tType === TERRAIN.SEA) mCost = 999;
+                    if (stats.moveType === MOVETYPE.LAND && tType === TERRAIN.MOUNTAIN) mCost = 999;
+                    if (stats.moveType === MOVETYPE.FOOT && tType === TERRAIN.MOUNTAIN) mCost = 2;
                     if (stats.moveType === MOVETYPE.AIR) mCost = 1;
 
-                    // Check if can pass through
                     if (!this.canPass(unit, nx, ny)) mCost = 999;
 
                     const friend = this.units.find(u => u.x === nx && u.y === ny && u.owner === unit.owner);
@@ -822,7 +1040,6 @@ class Game {
                             if (friend && friend !== unit && this.canBoard(unit, friend)) canStay = true;
                             
                             if (canStay) {
-                                // prevent duplicates
                                 if (!this.moveRange.some(p => p.x === nx && p.y === ny)) {
                                     this.moveRange.push({x: nx, y: ny});
                                 }
@@ -849,10 +1066,11 @@ class Game {
                 const tType = this.map[ny][nx];
                 let validTerrain = true;
                 
+                // 輸送船は港か道路でのみ降ろせる
                 if (unit.type === UNIT_TYPES.LANDER) {
                     const currentT = this.map[unit.y][unit.x];
                     if (currentT !== TERRAIN.PORT && currentT !== TERRAIN.SHOAL) {
-                        validTerrain = false;
+                        validTerrain = false; // 降ろす場所の条件ではなく、降ろす行為自体の制限
                     }
                 }
 
@@ -936,7 +1154,7 @@ class Game {
         list.innerHTML = '';
         
         let types = [];
-        if ([TERRAIN.CITY, TERRAIN.HQ].includes(b.type)) types = [UNIT_TYPES.INFANTRY, UNIT_TYPES.APC, UNIT_TYPES.TANK, UNIT_TYPES.ARTILLERY, UNIT_TYPES.ANTIAIR];
+        if ([TERRAIN.CITY, TERRAIN.HQ].includes(b.type)) types = [UNIT_TYPES.INFANTRY, UNIT_TYPES.APC, UNIT_TYPES.TANK, UNIT_TYPES.ARTILLERY, UNIT_TYPES.ANTIAIR, UNIT_TYPES.SUPPLY];
         if (b.type === TERRAIN.AIRPORT) types = [UNIT_TYPES.HELI, UNIT_TYPES.FIGHTER, UNIT_TYPES.BOMBER];
         if (b.type === TERRAIN.PORT) types = [UNIT_TYPES.SHIP, UNIT_TYPES.LANDER];
 
@@ -974,6 +1192,13 @@ class Game {
         this.turn = (this.turn + 1) % 2;
         
         if (this.turn === 1) {
+            // Sort units so Supply Truck moves last
+            this.units.sort((a, b) => {
+                if (a.type === UNIT_TYPES.SUPPLY && b.type !== UNIT_TYPES.SUPPLY) return 1;
+                if (a.type !== UNIT_TYPES.SUPPLY && b.type === UNIT_TYPES.SUPPLY) return -1;
+                return 0;
+            });
+
             const blueCount = this.units.filter(u => u.owner === 0).length;
             const redCount = this.units.filter(u => u.owner === 1).length;
             
@@ -1009,6 +1234,21 @@ class Game {
                         }
                     }
                 }
+                
+                // Supply Truck Passive
+                if (u.type === UNIT_TYPES.SUPPLY) {
+                    [[0,1],[0,-1],[1,0],[-1,0]].forEach(([dx, dy]) => {
+                        const nx = u.x + dx;
+                        const ny = u.y + dy;
+                        const friend = this.units.find(t => t.x === nx && t.y === ny && t.owner === u.owner);
+                        if (friend && friend.type !== UNIT_TYPES.SUPPLY) { // 不正再補給防止
+                             const fStats = UNITS[friend.type];
+                             if (fStats.moveType === MOVETYPE.LAND || fStats.moveType === MOVETYPE.FOOT) {
+                                 friend.ammo = fStats.maxAmmo;
+                             }
+                        }
+                    });
+                }
             }
         });
 
@@ -1027,36 +1267,44 @@ class Game {
             this.showToast("あなたのターン");
         }
     }
-
-    // --- CPU Logic ---
+    // ... existing code ...
     async cpuTurn() {
         try {
-            const myUnits = this.units.filter(u => u.owner === 1 && !u.finished);
-            const enemies = this.units.filter(u => u.owner === 0);
-            const hasAirEnemies = enemies.some(u => [UNIT_TYPES.HELI, UNIT_TYPES.FIGHTER, UNIT_TYPES.BOMBER].includes(u.type));
-
-            for (let unit of myUnits) {
-                if (!this.units.includes(unit)) continue;
+            // Filter available units. 
+            // Note: Since we modify units array (e.g. boarding), we iterate carefully
+            let actingUnit = true;
+            while (actingUnit) {
+                actingUnit = false;
+                // Find one unit that hasn't finished
+                const unit = this.units.find(u => u.owner === 1 && !u.finished);
+                if (!unit) break;
+                actingUnit = true;
 
                 const targetBuilding = this.findNearestBuilding(unit, [0, -1]); 
                 const enemyHQ = this.buildings.find(b => b.type === TERRAIN.HQ && b.owner === 0);
-                
+                const enemies = this.units.filter(u => u.owner === 0);
+
                 this.calcMoveRange(unit);
                 let bestMove = null;
                 let bestScore = -99999;
                 let bestAction = 'WAIT'; 
+                let bestTarget = null;
 
                 const isInfantry = (unit.type === UNIT_TYPES.INFANTRY);
                 const isTransporter = (UNITS[unit.type].capacityType !== undefined);
                 const hasCargo = !!unit.cargo;
                 const outOfAmmo = unit.ammo === 0;
+                const isSupply = (unit.type === UNIT_TYPES.SUPPLY);
 
-                if (this.moveRange.length === 0 && this.isValidPosition(unit, unit.x, unit.y)) {
-                    this.moveRange.push({x: unit.x, y: unit.y});
+                // Ensure current position is always available as fallback
+                if (this.moveRange.length === 0) {
+                     this.moveRange.push({x: unit.x, y: unit.y});
                 }
 
                 for (let m of this.moveRange) {
                     // 移動先が「待機可能」または「搭乗可能」でない場合、AIは選択しない
+                    // 搭乗チェックは別途行うが、まずは基本地形チェック
+                    // Cargo持ちなら不正地形(海上のヘリ等)もありうるので除外しない
                     if (!hasCargo && !this.isValidPosition(unit, m.x, m.y)) {
                         const transporter = this.units.find(u => u.x === m.x && u.y === m.y && u.owner === 1 && u !== unit);
                         if (!transporter || !this.canBoard(unit, transporter)) continue;
@@ -1064,18 +1312,11 @@ class Game {
 
                     let score = 0;
                     let action = 'WAIT';
+                    let target = null;
 
+                    // ... existing code ...
                     const transporter = this.units.find(u => u.x === m.x && u.y === m.y && u.owner === 1 && u !== unit);
-                    let canBoardTarget = transporter && this.canBoard(unit, transporter);
-                    
-                    // 味方がいるマスに、搭乗目的以外で移動（待機）しようとすると不正になるので除外
-                    // ただし搭乗可能な場合はOK
-                    if (transporter && !canBoardTarget) {
-                        // 味方の上にいる状態。これは通常ありえないが、もし候補に入ってしまっていたら除外
-                        continue;
-                    }
-
-                    if (canBoardTarget) {
+                    if (transporter && this.canBoard(unit, transporter)) {
                         const distToTarget = targetBuilding ? (Math.abs(m.x - targetBuilding.x) + Math.abs(m.y - targetBuilding.y)) : 99;
                         if (distToTarget > 5) { 
                             score += 1500;
@@ -1083,13 +1324,59 @@ class Game {
                         }
                     }
 
-                    if (outOfAmmo) {
+                    // Supply Truck Logic
+                    if (isSupply) {
+                         // Re-act Logic
+                         if (unit.ammo > 0) {
+                            // Check adjacent for finished allies
+                            let reactables = [];
+                             [[0,1],[0,-1],[1,0],[-1,0]].forEach(([dx, dy]) => {
+                                const nx = m.x + dx;
+                                const ny = m.y + dy;
+                                const ally = this.units.find(u => u.x === nx && u.y === ny && u.owner === 1 && u !== unit && u.finished);
+                                if (ally) {
+                                     const aStats = UNITS[ally.type];
+                                     if (aStats.moveType === MOVETYPE.LAND || aStats.moveType === MOVETYPE.FOOT) {
+                                         reactables.push(ally);
+                                     }
+                                }
+                            });
+                            if (reactables.length > 0) {
+                                score += 3000;
+                                action = 'REACT';
+                                // Prefer Tank/Artillery
+                                const priority = reactables.find(r => r.type === UNIT_TYPES.TANK || r.type === UNIT_TYPES.ARTILLERY);
+                                target = priority || reactables[0];
+                            }
+                         }
+                         
+                         // Move Logic
+                         if (outOfAmmo) {
+                             // Go to city
+                             const nearestSupply = this.findNearestSupply(unit);
+                             if (nearestSupply) {
+                                const dist = Math.abs(m.x - nearestSupply.x) + Math.abs(m.y - nearestSupply.y);
+                                score -= dist * 100;
+                            }
+                         } else {
+                             // Stay near Tanks
+                             const friends = this.units.filter(u => u.owner === 1 && (u.type === UNIT_TYPES.TANK || u.type === UNIT_TYPES.ARTILLERY));
+                             let minDist = 99;
+                             friends.forEach(f => {
+                                 const d = Math.abs(m.x - f.x) + Math.abs(m.y - f.y);
+                                 if (d < minDist) minDist = d;
+                             });
+                             score -= minDist * 10;
+                         }
+
+                    } else if (outOfAmmo) {
                         const nearestSupply = this.findNearestSupply(unit);
                         if (nearestSupply) {
                             const dist = Math.abs(m.x - nearestSupply.x) + Math.abs(m.y - nearestSupply.y);
                             score -= dist * 100;
                         }
                     } else {
+                        // Normal Unit Logic
                         const attackableTargets = enemies.filter(e => {
                             const dist = Math.abs(e.x - m.x) + Math.abs(e.y - m.y);
                             const range = UNITS[unit.type].range;
@@ -1101,7 +1388,7 @@ class Game {
                             let maxDmg = 0;
                             attackableTargets.forEach(t => {
                                 let dmg = this.getBaseDamage(unit.type, t.type);
-                                if (t.hp < dmg) dmg += 50; 
+                                if (t.hp < dmg) dmg += 50; // 撃破ボーナス
                                 if (dmg > maxDmg) maxDmg = dmg;
                             });
                             score += maxDmg;
@@ -1137,14 +1424,16 @@ class Game {
                             }
                         }
 
-                        if (unit.type === UNIT_TYPES.ARTILLERY || unit.type === UNIT_TYPES.ANTIAIR) {
+                        // 自走砲のアウトレンジ
+                        if (unit.type === UNIT_TYPES.ARTILLERY) {
                             let tooClose = false;
                             enemies.forEach(e => {
-                                if (Math.abs(e.x - m.x) + Math.abs(e.y - m.y) <= 1) tooClose = true;
+                                if (Math.abs(e.x - m.x) + Math.abs(e.y - m.y) <= 2) tooClose = true;
                             });
                             if (tooClose) score -= 500;
                         }
 
+                        // 目的地への距離
                         let dest = enemyHQ || targetBuilding;
                         if (dest) {
                             const dist = Math.abs(m.x - dest.x) + Math.abs(m.y - dest.y);
@@ -1152,23 +1441,18 @@ class Game {
                         }
                     }
 
-                    // 味方重複チェック (ActionがBOARDでない場合、移動先に味方がいたらNG)
-                    // moveRangeには味方通過可能マスが含まれるが、最終地点としてはNGな場合がある
-                    // calcMoveRangeではじいているはずだが、念の為
-                    if (action !== 'BOARD') {
-                        const overlap = this.units.find(u => u.x === m.x && u.y === m.y && u !== unit);
-                        if (overlap) continue; 
-                    }
-
+                    // ランダム性
                     score += Math.random() * 20;
 
                     if (score > bestScore) {
                         bestScore = score;
                         bestMove = m;
                         bestAction = action;
+                        bestTarget = target;
                     }
                 }
 
+                // 実行
                 if (bestMove) {
                     unit.x = bestMove.x;
                     unit.y = bestMove.y;
@@ -1178,21 +1462,34 @@ class Game {
                         const transporter = this.units.find(u => u.x === unit.x && u.y === unit.y && u !== unit);
                         if (transporter) {
                             transporter.cargo = unit;
-                            this.units = this.units.filter(u => u !== unit); 
+                            this.units = this.units.filter(u => u !== unit); // リストから消す
+                            // unitは消滅したので以降の処理スキップ
                             this.draw();
                             continue; 
                         }
                     }
 
+                    if (bestAction === 'REACT' && bestTarget) {
+                        bestTarget.finished = false;
+                        unit.ammo--;
+                        this.draw();
+                         await new Promise(r => setTimeout(r, 150));
+                    }
+
+                    // 降車 (DROP_READY)
                     if (bestAction === 'DROP_READY' || (isTransporter && hasCargo)) {
+                        // 降りられる場所を探す
                         this.calcDropRange(unit);
                         if (this.dropRange.length > 0) {
+                            // 一番良い場所（建物の上など）
+                            // 簡易的に最初の場所へ
                             const dropPos = this.dropRange[0]; 
                             this.executeDropAI(unit, dropPos.x, dropPos.y);
                             await new Promise(r => setTimeout(r, 150));
                         }
                     }
 
+                    // 占領
                     if (bestAction === 'CAPTURE' || (unit.type === UNIT_TYPES.INFANTRY)) {
                         const b = this.buildings.find(bu => bu.x === unit.x && bu.y === unit.y);
                         if (b && b.owner !== 1) {
@@ -1200,10 +1497,11 @@ class Game {
                         }
                     }
 
+                    // 攻撃
                     if (bestAction === 'ATTACK' && unit.ammo > 0) {
                         const targets = this.getAttackTargets(unit);
                         if (targets.length > 0) {
-                            targets.sort((a,b) => a.hp - b.hp); 
+                            targets.sort((a,b) => a.hp - b.hp); // 弱い敵優先
                             this.attackUnit(unit, targets[0]);
                         }
                     }
@@ -1215,14 +1513,17 @@ class Game {
                 unit.finished = true;
             }
 
+            // 生産AI
+            const enemiesList = this.units.filter(u => u.owner === 0);
+            const hasAirEnemies = enemiesList.some(u => [UNIT_TYPES.HELI, UNIT_TYPES.FIGHTER, UNIT_TYPES.BOMBER].includes(u.type));
             await this.cpuProduction(hasAirEnemies);
         } catch(e) {
-            console.error(e);
+            console.error("CPU Turn Error:", e);
         } finally {
             this.endTurn();
         }
     }
-
+    // ... existing code ...
     findNearestBuilding(unit, owners) {
         let nearest = null;
         let minDist = 999;
@@ -1272,7 +1573,9 @@ class Game {
 
     async cpuProduction(hasAirEnemies) {
         const factories = this.buildings.filter(b => b.owner === 1 && !this.units.find(u => u.x === b.x && u.y === b.y));
-        
+        const supplyCount = this.units.filter(u => u.owner === 1 && u.type === UNIT_TYPES.SUPPLY).length;
+        const landCount = this.units.filter(u => u.owner === 1 && (u.type === UNIT_TYPES.TANK || u.type === UNIT_TYPES.ARTILLERY || u.type === UNIT_TYPES.APC)).length;
+
         for (let b of factories) {
             if (this.aiStrategy.mode === 'SAVING' && this.funds[1] < 20000) continue; 
 
@@ -1281,6 +1584,11 @@ class Game {
                 if (this.aiStrategy.focus === 'LAND' || Math.random() > 0.5) {
                     candidates.push(UNIT_TYPES.TANK, UNIT_TYPES.ARTILLERY, UNIT_TYPES.APC);
                     if (hasAirEnemies) candidates.push(UNIT_TYPES.ANTIAIR); 
+                    
+                    // Logic for Supply Truck
+                    if (landCount >= 3 && supplyCount < 3) {
+                         candidates.push(UNIT_TYPES.SUPPLY);
+                    }
                 }
                 candidates.push(UNIT_TYPES.INFANTRY); 
             }
@@ -1296,14 +1604,22 @@ class Game {
             candidates = candidates.filter(t => UNITS[t].cost <= this.funds[1]);
             
             if (candidates.length > 0) {
-                candidates.sort((a,b) => UNITS[b].cost - UNITS[a].cost);
-                const pickIdx = Math.floor(Math.random() * Math.ceil(candidates.length / 2));
-                const type = candidates[pickIdx];
+                // Prioritize Supply if needed
+                if (candidates.includes(UNIT_TYPES.SUPPLY) && Math.random() > 0.5) {
+                    this.funds[1] -= UNITS[UNIT_TYPES.SUPPLY].cost;
+                    const newU = {type: UNIT_TYPES.SUPPLY, owner: 1, x: b.x, y: b.y, hp: 100, finished: true};
+                    newU.ammo = UNITS[UNIT_TYPES.SUPPLY].maxAmmo;
+                    this.units.push(newU);
+                } else {
+                    candidates.sort((a,b) => UNITS[b].cost - UNITS[a].cost);
+                    const pickIdx = Math.floor(Math.random() * Math.ceil(candidates.length / 2));
+                    const type = candidates[pickIdx];
 
-                this.funds[1] -= UNITS[type].cost;
-                const newU = {type: type, owner: 1, x: b.x, y: b.y, hp: 100, finished: true};
-                newU.ammo = UNITS[type].maxAmmo;
-                this.units.push(newU);
+                    this.funds[1] -= UNITS[type].cost;
+                    const newU = {type: type, owner: 1, x: b.x, y: b.y, hp: 100, finished: true};
+                    newU.ammo = UNITS[type].maxAmmo;
+                    this.units.push(newU);
+                }
                 this.updateUI();
                 this.draw();
                 await new Promise(r => setTimeout(r, 100));
@@ -1368,6 +1684,20 @@ class Game {
                 this.ctx.strokeRect(this.selectedTarget.x*TILE_SIZE, this.selectedTarget.y*TILE_SIZE, TILE_SIZE, TILE_SIZE);
             }
         }
+        if (this.state === 'REACT_SELECT' || this.state === 'CONFIRM_REACT') {
+             const targets = this.getReactTargets(this.selectedUnit);
+             const time = Date.now() / 200;
+             targets.forEach(t => {
+                this.ctx.strokeStyle = `rgba(0, 255, 0, ${Math.abs(Math.sin(time)) + 0.5})`;
+                this.ctx.lineWidth = 3;
+                this.ctx.strokeRect(t.x*TILE_SIZE, t.y*TILE_SIZE, TILE_SIZE, TILE_SIZE);
+             });
+             if (this.selectedTarget) {
+                 this.ctx.strokeStyle = '#00ff00';
+                 this.ctx.lineWidth = 5;
+                 this.ctx.strokeRect(this.selectedTarget.x*TILE_SIZE, this.selectedTarget.y*TILE_SIZE, TILE_SIZE, TILE_SIZE);
+             }
+        }
         
         this.units.forEach(u => this.drawUnit(u));
         if (this.selectedUnit) {
@@ -1385,6 +1715,7 @@ class Game {
             this.ctx.fillText(e.text, e.x, e.y + e.offsetY);
         });
         this.ctx.shadowBlur = 0;
+
         this.ctx.restore();
     }
 
