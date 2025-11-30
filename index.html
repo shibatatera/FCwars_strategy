@@ -58,6 +58,18 @@
             display: flex; gap: 10px; pointer-events: auto; z-index: 50;
             display: none; flex-wrap: wrap; justify-content: center; width: 95%;
         }
+        #stage-select {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+            max-height: 70vh; /* 画面の高さの70%を最大高さとする */
+            overflow-y: auto; /* 縦方向にスクロール可能にする */
+            width: 100%; /* 親要素の幅いっぱいに広げる */
+            align-items: center; /* ボタンを中央寄せ */
+            padding: 10px 0; /* 上下のパディングを追加 */
+            box-sizing: border-box; /* パディングを幅に含める */
+        }
         .action-btn {
             background: #fff; border: 2px solid #333; border-radius: 10px;
             width: 60px; height: 60px; display: flex; justify-content: center; align-items: center;
