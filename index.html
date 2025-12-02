@@ -26,7 +26,7 @@
             position: absolute; bottom: 20px; right: 20px;
             background-color: #ffecec; color: #d00; border-color: #d00; display: none;
         }
-        #help-btn {
+        #ingame-menu-btn {
             position: absolute; top: 10px; right: 10px; background-color: #eef; color: #338; padding: 8px 12px;
         }
         #info-panel {
@@ -147,7 +147,7 @@
 <div id="ui-layer">
     <div id="info-panel"></div>
     <div id="toast-msg"></div>
-    <button id="help-btn" class="btn" onclick="toggleHelp()">？ 遊び方</button>
+    <button id="ingame-menu-btn" class="btn" onclick="toggleGameMenu()">メニュー</button>
     <button id="end-turn-btn" class="btn">ターン終了</button>
 
     <div id="action-menu">
@@ -191,7 +191,7 @@
 
 <div id="menu-overlay" class="overlay" style="display:flex;">
     <h1 style="margin-bottom:10px; text-shadow: 2px 2px 0 #000;">WAR SIMULATION</h1>
-    <p style="font-size:14px; color:#ccc; margin-bottom:30px;">ステージ 1 ~ 4 は Gemini 作成</p>
+    <p style="font-size:14px; color:#ccc; margin-bottom:30px;">ステージ 1 ~ 4 は Gemini 作成 上下スワイプで選択</p>
     <p style="font-size:14px; color:#ccc; margin-bottom:10px;">緑の枠がファミコンウォーズ</p>
     <div id="stage-select">
         <button class="menu-btn" onclick="startGame(0)">ステージ 1 (地上戦)</button>
@@ -230,6 +230,21 @@
     <button class="menu-btn" onclick="resetGame()">タイトルへ戻る</button>
 </div>
 
+<div id="game-menu-bg" class="bg-cover" onclick="toggleGameMenu()" style="z-index: 149; display: none;"></div>
+<div id="game-menu-modal" class="overlay" style="z-index: 150; display: none;">
+    <h2 style="margin-bottom: 30px;">メニュー</h2>
+    <div style="display: flex; flex-direction: column; gap: 10px; align-items: center;">
+        <button class="menu-btn" onclick="showHelpFromMenu()">遊び方</button>
+        <div style="width: 80%; text-align: center; margin: 15px 0; color: white;">
+            <label for="speed-slider" style="display: block; margin-bottom: 5px;">アニメーション速度</label>
+            <input type="range" id="speed-slider" min="0.2" max="5" value="1.5" step="0.1" oninput="setAnimationSpeed(this.value)" style="width: 100%;">
+        </div>
+        <button id="anim-toggle-btn" class="menu-btn" onclick="toggleAnimation()">アニメーション: ON</button>
+        <button class="menu-btn" style="background:#c0392b;" onclick="confirmReset()">ゲームリセット</button>
+        <button class="menu-btn" style="background:#6c757d; margin-top: 20px;" onclick="toggleGameMenu()">戻る</button>
+    </div>
+</div>
+
 <div id="prod-bg" class="bg-cover" onclick="closeProduction()"></div>
 <div id="production-menu">
     <div class="prod-header">ユニット生産</div>
@@ -242,28 +257,35 @@
     <h3>かあちゃんたちにはないしょだぞ～</h3>
     <ul>
         <li>プレイヤー（青軍）とCPU（赤軍）が戦うターン制の戦略シミュレーションゲームです。ユニットを生産・指揮して、敵の本拠地を占領させれば勝利です！</li>
-        <li>操作方法</li>
+        <li><strong>操作方法</strong></li>
         <p><strong>ユニット選択:</strong> 自分のユニットをタップすると移動範囲が表示されます。</p>
         <p><strong>移動:</strong> 色がついた範囲をタップして移動します。</p>
         <p><strong>メニュー:</strong> 移動後、「攻撃」「待機」「占領」「搭乗」などのアクションを選びます。</p>
-        <p><strong>マップ移動:</strong> 画面をドラッグするとマップを見渡せます（ズームは非対応）。</p>
+        <p><strong>マップ移動:</strong> 画面をドラッグするとマップを見渡せます。ピンチイン・ピンチアウトでズーム・ズームアウトできます。</p>
+        <p>PCなら左クリック長押しで見渡せ、マウスホイール回転でズームです。</p>
         <p><strong>生産:</strong> オレンジ色の枠のある自分の拠点（街や空港など）で、ユニットが乗っていない状態の時にタップすると、資金を使ってユニットを生産できます。</p>
-        <li>勝利条件</li>
+        <li><strong>勝利条件</strong></li>
         <p><strong>敵本拠地の占領:</strong> 敵の本拠地（★マークの建物）に歩兵を送り込み、占領を完了する。</p>
+        <li><strong>ユニット</strong></li>
+        <p>ユニットには各相性があり、体力、残弾数、搭乗しているかが表示されます。</p>
+        <p>ユニット下側のゲージは体力を示します。</p>
+        <p>残弾数はユニット左上の数字で表示され、なくなると攻撃できなくなります。体力や残弾数は対応する建物や補給車（弾のみ）で補充できます。</p>
+        <li><strong>地形</strong></li>
+        <p>森や山などは移動コストが高いです。</p>
+        <p>ユニットに対応する建物に待機させると、次のターンで体力と残弾数を回復します。</p>
+        <p>森、山、建物にいると防御力があがります。</p>
+        <li>その他</li>
+        <p>CPUの出来栄えには期待しないでください。ごめんなさい。</p>
+        <p>Gemini と Gemini CLI に機能の全てを作っていただきました。ありがとうございます。</p>
     </ul>
     <button class="menu-btn" style="width:100%; margin:10px 0 0 0; padding:10px;" onclick="toggleHelp()">閉じる</button>
 </div>
 
 <script>
-    //<button class="menu-btn" style="background:#e74c3c;" onclick="startGame(4)">ステージ 5-a (デバッグ)</button>
+const BASE_TILE_SIZE = 50;
+let isAnimationEnabled = true;
+let animationSpeed = 1.5;
 
-    
-    //<button class="menu-btn" style="background:#aa0854;" onclick="startGame()">ステージ b (グガアシンリン)</button>
-    //
-
-    //<button class="menu-btn" style="background:#d310c3;" onclick="startGame()">ステージ a (ハイカンコットウ)</button>
-    //<button class="menu-btn" style="background:#d310c3;" onclick="startGame()">ステージ a (マメニギリメシ)</button>
-let TILE_SIZE = 50;
 let COLS = 10;
 let ROWS = 12; 
 
@@ -275,7 +297,7 @@ const TERRAIN = {
 const BUILDING_IDS = [10, 11, 12, 13];
 
 const TERRAIN_PROPS = {
-    [TERRAIN.PLAIN]: { color: '#8f8', cost: 1, defense: 1 },
+    [TERRAIN.PLAIN]: { color: '#34921d', cost: 1, defense: 1 },
     [TERRAIN.ROAD]:  { color: '#aaa', cost: 1, defense: 0 }, 
     [TERRAIN.FOREST]:{ color: '#272', cost: 2, defense: 2 },
     [TERRAIN.MOUNTAIN]:{ color: '#642', cost: 99, defense: 4 }, 
@@ -284,7 +306,7 @@ const TERRAIN_PROPS = {
     [TERRAIN.CITY]:  { color: '#bbb', cost: 1, defense: 3 },
     [TERRAIN.PORT]:  { color: '#48d', cost: 1, defense: 2 },     
     [TERRAIN.AIRPORT]:{ color: '#999', cost: 1, defense: 2 },
-    [TERRAIN.SHOAL]: { color: '#ffeaa7', cost: 1, defense: 0 },
+    [TERRAIN.SHOAL]: { color: '#b8860b', cost: 1, defense: 0 },
     [TERRAIN.RIVER]: { color: '#add8e6', cost: 5, defense: 0 },
     [TERRAIN.POND]:  { color: '#00008b', cost: 99, defense: 0 }
 };
@@ -658,8 +680,8 @@ const STAGES = [
     ],
     // Stage 17 ハマキ
     [
-        [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4],
-        [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4],
+        [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4],
+        [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4],
         [4,4,4,4,4,4,4,4,4,4,14,14,14,14,14,14,4,4,4,4,4,4,0,4,4,4,4,4,4,14,4,4,4,4,4,4,4,4,4,14,14,14,4,4,4,4,4,4],
         [4,4,4,4,4,4,4,4,4,4,0,0,0,0,0,0,4,4,4,0,0,0,12,4,4,4,4,0,0,0,14,14,14,14,4,4,4,4,3,0,0,0,4,4,4,4,4,4],
         [4,4,4,14,0,0,0,0,0,0,0,0,0,2,2,0,0,4,0,0,0,13,0,3,3,3,0,11,1,2,0,3,0,0,14,14,3,3,3,11,0,0,0,0,4,4,4,4], //5
@@ -668,11 +690,11 @@ const STAGES = [
         [4,4,4,0,11,10,13,2,2,3,1,0,0,1,0,3,2,2,2,3,2,2,0,3,1,1,1,1,1,11,1,1,11,0,0,0,3,1,1,1,1,1,13,0,0,4,4,4],
         [4,4,4,0,0,11,1,2,2,3,1,0,3,1,2,2,0,2,2,3,1,1,1,1,1,3,0,0,0,0,0,1,2,0,0,1,1,1,3,3,0,11,10,11,0,4,4,4],
         [4,4,4,0,13,0,1,1,1,1,1,0,3,1,1,1,11,1,1,1,1,0,0,3,3,3,0,11,0,0,3,1,1,11,1,1,3,3,3,3,0,0,11,0,0,4,4,4], //10
-        [4,4,4,0,0,2,2,2,0,2,2,2,2,0,2,2,2,2,2,0,0,11,0,3,3,0,0,2,2,0,3,0,0,2,2,2,3,3,3,3,0,0,0,12,14,4,4,4,4],
+        [4,4,4,0,0,2,2,2,0,2,2,2,2,0,2,2,2,2,2,0,0,11,0,3,3,0,0,2,2,0,3,0,0,2,2,2,3,3,3,3,0,0,0,12,14,4,4,4],
         [4,4,4,14,0,0,0,0,11,0,0,4,0,11,0,0,0,0,0,14,14,0,0,3,3,12,0,4,4,13,0,0,11,0,0,0,3,3,3,0,0,11,14,14,4,4,4,4],
         [4,4,4,4,4,4,0,0,0,14,14,4,14,0,0,14,14,14,14,4,4,4,4,4,4,4,4,4,4,4,0,0,0,11,4,4,4,4,4,4,4,4,4,4,4,4,4,4],
         [4,4,4,4,4,4,14,14,14,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,14,14,14,14,4,4,4,4,4,4,4,4,4,4,4,4,4,4],
-        [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4],
+        [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4],
     ],
     // Stage 18 サイコロ
     [
@@ -1225,21 +1247,21 @@ const AFFILIATION = [
     ],
     // Stage 17 ハマキ
     [
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], //5
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], //5
         [0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
         [0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0],
         [0,0,0,0,2,2,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0],
         [0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0],
         [0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0], //10
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0],
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
     ],
     // Stage 18 サイコロ
     [
@@ -1792,21 +1814,21 @@ const PRODUCIBLE = [
     ],
     // Stage 17 ハマキ
     [
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], //5
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], //5
         [0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
         [0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0],
         [0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0],
         [0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0],
         [0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0], //10
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0],
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
     ],
     // Stage 18 サイコロ
     [
@@ -2171,6 +2193,12 @@ class Game {
         this.lastOffsetY = 0;
         this.dragThreshold = 5; 
         
+        this.zoomLevel = 1.0;
+        this.minZoom = 0.4;
+        this.maxZoom = 2.5;
+        this.isPinching = false;
+        this.pinchStartDistance = null;
+
         this.aiStrategy = { mode: 'NORMAL', focus: 'LAND' };
 
         this.initInput();
@@ -2178,11 +2206,86 @@ class Game {
         this.resize(false);
         
         const loop = () => {
-            this.updateEffects();
+            this.update();
             this.draw();
             requestAnimationFrame(loop);
         };
         loop();
+    }
+
+    update() {
+        this.updateEffects();
+        this.updateAnimations();
+    }
+
+    updateAnimations() {
+        if (this.state !== 'ANIMATING' && !this.units.some(u => u.isAnimating)) return;
+
+        const justFinished = [];
+        let stillAnimatingCount = 0;
+        
+        this.units.forEach(unit => {
+            if (unit.isAnimating) {
+                const speed = (0.03 * animationSpeed);
+                unit.animProgress += speed;
+
+                if (unit.animProgress >= 1) {
+                    unit.animProgress = 1;
+                    justFinished.push(unit);
+                } else {
+                    stillAnimatingCount++;
+                }
+            }
+        });
+
+        justFinished.forEach(unit => {
+            unit.isAnimating = false;
+            unit.x = unit.animEndX;
+            unit.y = unit.animEndY;
+
+            if (unit.animOnComplete) {
+                unit.animOnComplete();
+            }
+            // Cleanup animation properties
+            delete unit.isAnimating;
+            delete unit.animProgress;
+            delete unit.animStartX;
+            delete unit.animStartY;
+            delete unit.animEndX;
+            delete unit.animEndY;
+            delete unit.animOnComplete;
+        });
+        
+        if (stillAnimatingCount === 0 && this.state === 'ANIMATING') {
+            // Allow state to be changed by onComplete callbacks.
+            // If nothing changed it, reset to IDLE as a fallback.
+            if(this.state === 'ANIMATING') this.state = 'IDLE';
+        }
+    }
+
+    animateUnitMove(unit, toX, toY) {
+        return new Promise(resolve => {
+            if (!isAnimationEnabled || animationSpeed <= 0) {
+                unit.x = toX;
+                unit.y = toY;
+                resolve();
+                return;
+            }
+            
+            this.state = 'ANIMATING';
+
+            unit.isAnimating = true;
+            unit.animProgress = 0;
+            unit.animStartX = unit.x; // Grid coords
+            unit.animStartY = unit.y; // Grid coords
+            unit.animEndX = toX;       // Grid coords
+            unit.animEndY = toY;       // Grid coords
+            unit.animOnComplete = resolve;
+        });
+    }
+
+    get effectiveTileSize() {
+        return BASE_TILE_SIZE * this.zoomLevel;
     }
 
     resize(draw = true) {
@@ -2190,7 +2293,7 @@ class Game {
         const h = window.innerHeight;
         this.canvas.width = w;
         this.canvas.height = h;
-        TILE_SIZE = 50; 
+        const TILE_SIZE = this.effectiveTileSize;
         this.cameraOffset.x = Math.floor((w - COLS * TILE_SIZE) / 2);
         this.cameraOffset.y = Math.floor((h - ROWS * TILE_SIZE) / 2);
         if (COLS * TILE_SIZE > w) this.cameraOffset.x = 20;
@@ -2283,29 +2386,68 @@ class Game {
     }
 
     screenToGrid(sx, sy) {
+        const TILE_SIZE = this.effectiveTileSize;
         const x = Math.floor((sx - this.cameraOffset.x) / TILE_SIZE);
         const y = Math.floor((sy - this.cameraOffset.y) / TILE_SIZE);
         if (x >= 0 && x < COLS && y >= 0 && y < ROWS) return {x, y};
         return null;
     }
 
+    getTouchDistance(touches) {
+        const dx = touches[0].clientX - touches[1].clientX;
+        const dy = touches[0].clientY - touches[1].clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    getTouchCenter(touches) {
+        return {
+            x: (touches[0].clientX + touches[1].clientX) / 2,
+            y: (touches[0].clientY + touches[1].clientY) / 2
+        };
+    }
+    
+    zoomOnPoint(scaleMultiplier, screenX, screenY) {
+        const currentTileSize = this.effectiveTileSize;
+        const worldX = (screenX - this.cameraOffset.x) / currentTileSize;
+        const worldY = (screenY - this.cameraOffset.y) / currentTileSize;
+
+        const oldZoom = this.zoomLevel;
+        this.zoomLevel *= scaleMultiplier;
+        this.zoomLevel = Math.max(this.minZoom, Math.min(this.maxZoom, this.zoomLevel));
+
+        if (oldZoom === this.zoomLevel) return;
+
+        const newTileSize = this.effectiveTileSize;
+        this.cameraOffset.x = screenX - worldX * newTileSize;
+        this.cameraOffset.y = screenY - worldY * newTileSize;
+    }
+
     initInput() {
         const isMenuOpen = () => {
-            const ids = ['menu-overlay', 'message-overlay', 'production-menu', 'help-modal'];
+            const ids = ['menu-overlay', 'message-overlay', 'production-menu', 'help-modal', 'game-menu-modal'];
             return ids.some(id => {
                 const el = document.getElementById(id);
                 return el.style.display === 'block' || el.style.display === 'flex';
             });
         };
         const isUI = (target) => {
-            return target.tagName === 'BUTTON' || target.closest('button') || 
+            return target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.closest('button') || 
                    target.closest('.menu-btn') || target.closest('.action-btn') || 
                    target.closest('#action-menu');
         };
 
         const handleStart = (e) => {
-            if (isMenuOpen()) return;
-            if (isUI(e.target)) return;
+            if (isMenuOpen() || isUI(e.target)) return;
+
+            if (e.touches) {
+                if (e.touches.length === 2) {
+                    this.isPinching = true;
+                    this.isDragging = false;
+                    this.pinchStartDistance = this.getTouchDistance(e.touches);
+                    return;
+                }
+                if (e.touches.length > 1) return; 
+            }
 
             const cx = e.touches ? e.touches[0].clientX : e.clientX;
             const cy = e.touches ? e.touches[0].clientY : e.clientY;
@@ -2319,7 +2461,25 @@ class Game {
 
         const handleMove = (e) => {
             if (isMenuOpen()) return;
-            if (this.dragStartX === null) return;
+
+            if (this.isPinching && e.touches && e.touches.length === 2) {
+                if (this.pinchStartDistance === null) return;
+                
+                const newDist = this.getTouchDistance(e.touches);
+                const scaleMultiplier = newDist / this.pinchStartDistance;
+
+                const center = this.getTouchCenter(e.touches);
+                const rect = this.canvas.getBoundingClientRect();
+                const pinchX = center.x - rect.left;
+                const pinchY = center.y - rect.top;
+
+                this.zoomOnPoint(scaleMultiplier, pinchX, pinchY);
+                
+                this.pinchStartDistance = newDist;
+                return;
+            }
+
+            if (this.dragStartX === null || this.isPinching) return;
 
             const cx = e.touches ? e.touches[0].clientX : e.clientX;
             const cy = e.touches ? e.touches[0].clientY : e.clientY;
@@ -2339,9 +2499,16 @@ class Game {
 
         const handleEnd = (e) => {
             if (isMenuOpen()) return;
+            
+            let wasPinching = this.isPinching;
+            if (this.isPinching && (!e.touches || e.touches.length < 2)) {
+                this.isPinching = false;
+                this.pinchStartDistance = null;
+            }
+
             if (isUI(e.target)) return;
             
-            if (!this.isDragging) {
+            if (!this.isDragging && !wasPinching && this.state !== 'ANIMATING') {
                 if (e.cancelable) e.preventDefault();
                 const cx = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
                 const cy = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
@@ -2355,6 +2522,14 @@ class Game {
             this.dragStartX = null;
             this.dragStartY = null;
         };
+
+        this.canvas.addEventListener('wheel', e => {
+            if (isMenuOpen()) return;
+            e.preventDefault();
+            const scaleMultiplier = e.deltaY > 0 ? 0.95 : 1.05;
+            const rect = this.canvas.getBoundingClientRect();
+            this.zoomOnPoint(scaleMultiplier, e.clientX - rect.left, e.clientY - rect.top);
+        }, { passive: false });
 
         this.canvas.addEventListener('mousedown', handleStart);
         window.addEventListener('mousemove', handleMove);
@@ -2374,14 +2549,20 @@ class Game {
     }
 
     addDamageEffect(x, y, damage) {
-        this.effects.push({ x: x * TILE_SIZE + TILE_SIZE/2, y: y * TILE_SIZE + TILE_SIZE/2, text: damage.toString(), life: 60, offsetY: 0 });
+        const TILE_SIZE = this.effectiveTileSize;
+        const effectX = x * TILE_SIZE + TILE_SIZE / 2;
+        const effectY = y * TILE_SIZE + TILE_SIZE / 2;
+        this.effects.push({ x: effectX, y: effectY, text: damage.toString(), life: 60, offsetY: 0 });
     }
+
     updateEffects() {
         this.effects.forEach(e => { e.life--; e.offsetY -= 0.5; });
         this.effects = this.effects.filter(e => e.life > 0);
     }
 
-    handleClick(x, y) {
+    async handleClick(x, y) {
+        if (this.state === 'ANIMATING') return;
+
         const unit = this.units.find(u => u.x === x && u.y === y);
         const building = this.buildings.find(b => b.x === x && b.y === y);
 
@@ -2399,11 +2580,9 @@ class Game {
             }
         } 
         else if (this.state === 'MOVE_SELECT') {
-            // 移動可能範囲リストに (x,y) が含まれているか
             const valid = this.moveRange.some(p => p.x === x && p.y === y);
             if (valid) {
-                this.selectedUnit.x = x;
-                this.selectedUnit.y = y;
+                await this.animateUnitMove(this.selectedUnit, x, y);
                 this.state = 'ACTION_SELECT';
                 this.showActionMenu();
             } else {
@@ -2696,10 +2875,13 @@ class Game {
 
     uiActionCancel() {
         if (this.selectedUnit && this.tempUnitState) {
-            this.selectedUnit.x = this.tempUnitState.x;
-            this.selectedUnit.y = this.tempUnitState.y;
+             // Re-animate the unit back to its original position
+            this.animateUnitMove(this.selectedUnit, this.tempUnitState.x, this.tempUnitState.y).then(() => {
+                this.cleanupUI();
+            });
+        } else {
+            this.cleanupUI();
         }
-        this.cleanupUI();
     }
 
     cleanupUI() {
@@ -3245,9 +3427,7 @@ class Game {
                 }
 
                 if (bestMove) {
-                    unit.x = bestMove.x;
-                    unit.y = bestMove.y;
-                    await new Promise(r => setTimeout(r, 150));
+                    await this.animateUnitMove(unit, bestMove.x, bestMove.y);
 
                     if (bestAction === 'BOARD') {
                         const transporter = this.units.find(u => u.x === unit.x && u.y === unit.y && u !== unit);
@@ -3381,7 +3561,14 @@ class Game {
     }
 
     async cpuProduction(hasAirEnemies) {
-        const factories = this.buildings.filter(b => b.owner === 1 && b.producible && !this.units.find(u => u.x === b.x && u.y === b.y));
+        let factories = this.buildings.filter(b => b.owner === 1 && b.producible && !this.units.find(u => u.x === b.x && u.y === b.y));
+        
+        // Shuffle the factories array to randomize production location
+        for (let i = factories.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [factories[i], factories[j]] = [factories[j], factories[i]];
+        }
+
         const supplyCount = this.units.filter(u => u.owner === 1 && u.type === UNIT_TYPES.SUPPLY).length;
         const landCount = this.units.filter(u => u.owner === 1 && (u.type === UNIT_TYPES.TANK || u.type === UNIT_TYPES.ARTILLERY || u.type === UNIT_TYPES.APC)).length;
 
@@ -3459,6 +3646,8 @@ class Game {
         this.ctx.save();
         this.ctx.translate(this.cameraOffset.x, this.cameraOffset.y);
         
+        const TILE_SIZE = this.effectiveTileSize;
+
         this.map.forEach((row, y) => row.forEach((t, x) => this.drawTile(x, y, t)));
         this.buildings.forEach(b => this.drawBuilding(b));
         
@@ -3500,14 +3689,14 @@ class Game {
         }
         
         this.units.forEach(u => this.drawUnit(u));
-        if (this.selectedUnit) {
+        if (this.selectedUnit && !this.selectedUnit.isAnimating) {
             this.ctx.strokeStyle = 'yellow';
             this.ctx.lineWidth = 3;
             this.ctx.strokeRect(this.selectedUnit.x*TILE_SIZE, this.selectedUnit.y*TILE_SIZE, TILE_SIZE, TILE_SIZE);
         }
 
         this.ctx.fillStyle = '#fff';
-        this.ctx.font = 'bold 20px sans-serif';
+        this.ctx.font = `bold ${Math.max(12, 20 * this.zoomLevel)}px sans-serif`;
         this.ctx.textAlign = 'center';
         this.ctx.shadowColor = 'black';
         this.ctx.shadowBlur = 4;
@@ -3520,6 +3709,7 @@ class Game {
     }
 
     drawTile(x, y, t) {
+        const TILE_SIZE = this.effectiveTileSize;
         this.ctx.save();
         this.ctx.fillStyle = TERRAIN_PROPS[t] ? TERRAIN_PROPS[t].color : '#fff';
         this.ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
@@ -3561,6 +3751,7 @@ class Game {
     }
 
     drawBuilding(b) {
+        const TILE_SIZE = this.effectiveTileSize;
         this.ctx.save();
         const c = b.owner === 0 ? '#48f' : (b.owner === 1 ? '#f44' : '#888');
         const x = b.x*TILE_SIZE, y = b.y*TILE_SIZE;
@@ -3589,35 +3780,54 @@ class Game {
     }
 
     drawUnit(u) {
-        const x = u.x*TILE_SIZE, y = u.y*TILE_SIZE;
+        const TILE_SIZE = this.effectiveTileSize;
+        let drawX, drawY;
+
+        if (u.isAnimating) {
+            const ease = (t) => t < 0.5 ? 2*t*t : -1+(4-2*t)*t; // ease in-out quad
+            const progress = ease(u.animProgress);
+            
+            const startX = u.animStartX * TILE_SIZE;
+            const startY = u.animStartY * TILE_SIZE;
+            const endX = u.animEndX * TILE_SIZE;
+            const endY = u.animEndY * TILE_SIZE;
+            
+            drawX = startX + (endX - startX) * progress;
+            drawY = startY + (endY - startY) * progress;
+        } else {
+            drawX = u.x * TILE_SIZE;
+            drawY = u.y * TILE_SIZE;
+        }
+        
         let baseColor;
         if (u.owner === 0) baseColor = u.finished ? '#236' : '#48f';
         else baseColor = u.finished ? '#622' : '#f44';
         
         this.ctx.fillStyle = baseColor;
-        this.ctx.beginPath(); this.ctx.arc(x+TILE_SIZE/2, y+TILE_SIZE/2, TILE_SIZE/2-3, 0, Math.PI*2); this.ctx.fill();
+        this.ctx.beginPath(); this.ctx.arc(drawX+TILE_SIZE/2, drawY+TILE_SIZE/2, TILE_SIZE/2-3, 0, Math.PI*2); this.ctx.fill();
         this.ctx.strokeStyle='#fff'; this.ctx.lineWidth=2; this.ctx.stroke();
         this.ctx.fillStyle='#fff'; this.ctx.font=`bold ${Math.floor(TILE_SIZE/2.5)}px sans-serif`;
         this.ctx.textAlign='center'; this.ctx.textBaseline='middle';
-        this.ctx.fillText(UNITS[u.type].label, x+TILE_SIZE/2, y+TILE_SIZE/2);
+        this.ctx.fillText(UNITS[u.type].label, drawX+TILE_SIZE/2, drawY+TILE_SIZE/2);
         
         const hpPct = u.hp / 100;
         this.ctx.fillStyle = 'red';
-        this.ctx.fillRect(x+2, y+TILE_SIZE-6, TILE_SIZE-4, 4);
+        this.ctx.fillRect(drawX+2, drawY+TILE_SIZE-6, TILE_SIZE-4, 4);
         this.ctx.fillStyle = hpPct > 0.5 ? '#0f0' : '#ff0';
-        this.ctx.fillRect(x+2, y+TILE_SIZE-6, (TILE_SIZE-4)*hpPct, 4);
+        this.ctx.fillRect(drawX+2, drawY+TILE_SIZE-6, (TILE_SIZE-4)*hpPct, 4);
 
-        // 弾数表示
-        this.ctx.fillStyle = '#80f';
-        this.ctx.fillRect(x+1, y+1, 18, 14); // Slightly larger
-        this.ctx.fillStyle = '#fff';
-        this.ctx.font = '13px monospace'; // Larger font
-        this.ctx.fillText(u.ammo, x+10, y+8);
+        if (TILE_SIZE > 25) {
+            this.ctx.fillStyle = '#80f';
+            this.ctx.fillRect(drawX+1, drawY+1, 18, 14);
+            this.ctx.fillStyle = '#fff';
+            this.ctx.font = '13px monospace';
+            this.ctx.fillText(u.ammo, drawX+10, drawY+8);
+        }
 
         if (u.cargo) {
             this.ctx.fillStyle = '#a0f'; // Purple
             this.ctx.beginPath();
-            this.ctx.arc(x+TILE_SIZE-6, y+6, 4, 0, Math.PI*2);
+            this.ctx.arc(drawX+TILE_SIZE-6, drawY+6, Math.max(2, TILE_SIZE * 0.1), 0, Math.PI*2);
             this.ctx.fill();
         }
     }
@@ -3640,7 +3850,41 @@ window.toggleHelp = () => {
     const s = m.style.display === 'block' ? 'none' : 'block';
     m.style.display = s; b.style.display = s;
 };
+window.confirmReset = () => {
+    if (window.confirm("ゲームをリセットします よろしいですか？")) {
+        resetGame();
+    }
+};
+
 window.resetGame = () => location.reload();
+
+window.toggleGameMenu = () => {
+    const menu = document.getElementById('game-menu-modal');
+    const bg = document.getElementById('game-menu-bg');
+    const isVisible = menu.style.display === 'flex';
+
+    if (!isVisible) {
+        document.getElementById('speed-slider').value = animationSpeed;
+        document.getElementById('anim-toggle-btn').innerText = `アニメーション: ${isAnimationEnabled ? 'ON' : 'OFF'}`;
+    }
+    
+    menu.style.display = isVisible ? 'none' : 'flex';
+    bg.style.display = isVisible ? 'none' : 'block';
+};
+
+window.setAnimationSpeed = (val) => {
+    animationSpeed = parseFloat(val);
+};
+
+window.toggleAnimation = () => {
+    isAnimationEnabled = !isAnimationEnabled;
+    document.getElementById('anim-toggle-btn').innerText = `アニメーション: ${isAnimationEnabled ? 'ON' : 'OFF'}`;
+};
+
+window.showHelpFromMenu = () => {
+    toggleGameMenu(); // Close game menu
+    setTimeout(() => toggleHelp(), 100); // Open help menu after a short delay
+};
 </script>
 </body>
 </html>
