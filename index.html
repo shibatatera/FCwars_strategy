@@ -3663,7 +3663,7 @@ class Game {
             const targets = this.getAttackTargets(this.selectedUnit);
             const time = Date.now() / 200;
             targets.forEach(t => {
-                this.ctx.strokeStyle = `rgba(255, 0, 0, ${Math.abs(Math.sin(time)) + 0.5})`;
+                this.ctx.strokeStyle = `rgba(255, 50, 255, ${Math.abs(Math.sin(time)) + 0.5})`;
                 this.ctx.lineWidth = 3;
                 this.ctx.strokeRect(t.x*TILE_SIZE, t.y*TILE_SIZE, TILE_SIZE, TILE_SIZE);
             });
@@ -3682,7 +3682,7 @@ class Game {
                 this.ctx.strokeRect(t.x*TILE_SIZE, t.y*TILE_SIZE, TILE_SIZE, TILE_SIZE);
              });
              if (this.selectedTarget) {
-                 this.ctx.strokeStyle = '#00ff00';
+                 this.ctx.strokeStyle = 'red';
                  this.ctx.lineWidth = 5;
                  this.ctx.strokeRect(this.selectedTarget.x*TILE_SIZE, this.selectedTarget.y*TILE_SIZE, TILE_SIZE, TILE_SIZE);
              }
