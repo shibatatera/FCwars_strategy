@@ -34,6 +34,29 @@
             padding: 8px 12px; border-radius: 6px; font-size: 13px; line-height: 1.4;
             pointer-events: none; display: none; box-shadow: 0 2px 5px rgba(0,0,0,0.3);
         }
+        #cargo-info-panel {
+            display: none;
+            position: absolute;
+            top: 120px;
+            left: 10px;
+            background: rgba(0,0,0,0.75);
+            border: 2px solid #fff;
+            border-radius: 10px;
+            padding: 5px;
+            width: 74px;
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        #cargo-stats {
+            color: white;
+            font-size: 11px;
+            text-align: center;
+            margin-top: 2px;
+            font-weight: bold;
+        }
         #toast-msg {
             position: absolute; top: 15%; left: 50%; transform: translate(-50%, -50%);
             background: rgba(0,0,0,0.8); color: white; padding: 10px 20px; border-radius: 30px;
@@ -187,6 +210,11 @@
         </div>
         <div style="text-align:center; color:white; margin-top:5px; font-weight:bold; text-shadow:1px 1px 0 #000;">対象をタップして変更</div>
     </div>
+
+    <div id="cargo-info-panel" style="display: none;">
+        <canvas id="cargo-canvas" width="60" height="60"></canvas>
+        <div id="cargo-stats"></div>
+    </div>
 </div>
 
 <div id="menu-overlay" class="overlay" style="display:flex;">
@@ -256,7 +284,8 @@
 <div id="help-modal">
     <h3>かあちゃんたちにはないしょだぞ～</h3>
     <ul>
-        <li>プレイヤー（青軍）とCPU（赤軍）が戦うターン制の戦略シミュレーションゲームです。ユニットを生産・指揮して、敵の本拠地を占領させれば勝利です！</li>
+        <li><strong>ゲーム紹介</strong></li>
+        <p>プレイヤー（青軍）とCPU（赤軍）が戦うターン制の戦略シミュレーションゲームです。ユニットを生産・指揮して、敵の本拠地を占領させれば勝利です！</p>
         <li><strong>操作方法</strong></li>
         <p><strong>ユニット選択:</strong> 自分のユニットをタップすると移動範囲が表示されます。</p>
         <p><strong>移動:</strong> 色がついた範囲をタップして移動します。</p>
@@ -319,15 +348,15 @@ const MOVETYPE = { LAND: 0, AIR: 1, SEA: 2, FOOT: 3 };
 
 const DMG = {
     [UNIT_TYPES.INFANTRY]: { [UNIT_TYPES.INFANTRY]: 55, [UNIT_TYPES.APC]: 15, [UNIT_TYPES.TANK]: 5,  [UNIT_TYPES.ARTILLERY]: 15, [UNIT_TYPES.ANTIAIR]: 15, [UNIT_TYPES.SUPPLY]: 15, [UNIT_TYPES.HELI]: 15, [UNIT_TYPES.BOMBER]: 10, [UNIT_TYPES.FIGHTER]: 10, [UNIT_TYPES.LANDER]: 10 },
-    [UNIT_TYPES.APC]:      { [UNIT_TYPES.INFANTRY]: 75, [UNIT_TYPES.APC]: 50, [UNIT_TYPES.TANK]: 15, [UNIT_TYPES.ARTILLERY]: 50, [UNIT_TYPES.ANTIAIR]: 50, [UNIT_TYPES.SUPPLY]: 55, [UNIT_TYPES.HELI]: 40, [UNIT_TYPES.BOMBER]: 0, [UNIT_TYPES.FIGHTER]: 0, [UNIT_TYPES.LANDER]: 20 },
-    [UNIT_TYPES.TANK]:     { [UNIT_TYPES.INFANTRY]: 80, [UNIT_TYPES.APC]: 85, [UNIT_TYPES.TANK]: 55, [UNIT_TYPES.ARTILLERY]: 75, [UNIT_TYPES.ANTIAIR]: 75, [UNIT_TYPES.SUPPLY]: 85, [UNIT_TYPES.HELI]: 15, [UNIT_TYPES.BOMBER]: 0, [UNIT_TYPES.FIGHTER]: 0, [UNIT_TYPES.SHIP]: 10, [UNIT_TYPES.LANDER]: 55 },
-    [UNIT_TYPES.ARTILLERY]:{ [UNIT_TYPES.INFANTRY]: 40, [UNIT_TYPES.APC]: 70, [UNIT_TYPES.TANK]: 70, [UNIT_TYPES.ARTILLERY]: 75, [UNIT_TYPES.ANTIAIR]: 75, [UNIT_TYPES.SUPPLY]: 75, [UNIT_TYPES.HELI]: 0, [UNIT_TYPES.BOMBER]: 0, [UNIT_TYPES.FIGHTER]: 0, [UNIT_TYPES.SHIP]: 40, [UNIT_TYPES.LANDER]: 60 },
-    [UNIT_TYPES.ANTIAIR]:  { [UNIT_TYPES.INFANTRY]: 0, [UNIT_TYPES.APC]: 0, [UNIT_TYPES.TANK]: 0, [UNIT_TYPES.ARTILLERY]: 0, [UNIT_TYPES.ANTIAIR]: 0, [UNIT_TYPES.SUPPLY]: 0, [UNIT_TYPES.HELI]: 110, [UNIT_TYPES.BOMBER]: 85, [UNIT_TYPES.FIGHTER]: 75, [UNIT_TYPES.SHIP]: 0, [UNIT_TYPES.LANDER]: 0 },
+    [UNIT_TYPES.APC]:      { [UNIT_TYPES.INFANTRY]: 75, [UNIT_TYPES.APC]: 50, [UNIT_TYPES.TANK]: 15, [UNIT_TYPES.ARTILLERY]: 50, [UNIT_TYPES.ANTIAIR]: 50, [UNIT_TYPES.SUPPLY]: 60, [UNIT_TYPES.HELI]: 40, [UNIT_TYPES.BOMBER]: 0, [UNIT_TYPES.FIGHTER]: 0, [UNIT_TYPES.LANDER]: 20 },
+    [UNIT_TYPES.TANK]:     { [UNIT_TYPES.INFANTRY]: 80, [UNIT_TYPES.APC]: 85, [UNIT_TYPES.TANK]: 55, [UNIT_TYPES.ARTILLERY]: 75, [UNIT_TYPES.ANTIAIR]: 75, [UNIT_TYPES.SUPPLY]: 90, [UNIT_TYPES.HELI]: 15, [UNIT_TYPES.BOMBER]: 0, [UNIT_TYPES.FIGHTER]: 0, [UNIT_TYPES.SHIP]: 10, [UNIT_TYPES.LANDER]: 55 },
+    [UNIT_TYPES.ARTILLERY]:{ [UNIT_TYPES.INFANTRY]: 40, [UNIT_TYPES.APC]: 70, [UNIT_TYPES.TANK]: 70, [UNIT_TYPES.ARTILLERY]: 75, [UNIT_TYPES.ANTIAIR]: 75, [UNIT_TYPES.SUPPLY]: 80, [UNIT_TYPES.HELI]: 0, [UNIT_TYPES.BOMBER]: 0, [UNIT_TYPES.FIGHTER]: 0, [UNIT_TYPES.SHIP]: 40, [UNIT_TYPES.LANDER]: 60 },
+    [UNIT_TYPES.ANTIAIR]:  { [UNIT_TYPES.INFANTRY]: 0, [UNIT_TYPES.APC]: 0, [UNIT_TYPES.TANK]: 0, [UNIT_TYPES.ARTILLERY]: 0, [UNIT_TYPES.ANTIAIR]: 0, [UNIT_TYPES.SUPPLY]: 0, [UNIT_TYPES.HELI]: 95, [UNIT_TYPES.BOMBER]: 85, [UNIT_TYPES.FIGHTER]: 75, [UNIT_TYPES.SHIP]: 0, [UNIT_TYPES.LANDER]: 0 },
     [UNIT_TYPES.SUPPLY]:   { [UNIT_TYPES.INFANTRY]: 0, [UNIT_TYPES.APC]: 0, [UNIT_TYPES.TANK]: 0, [UNIT_TYPES.ARTILLERY]: 0, [UNIT_TYPES.ANTIAIR]: 0, [UNIT_TYPES.SUPPLY]: 0, [UNIT_TYPES.HELI]: 0, [UNIT_TYPES.BOMBER]: 0, [UNIT_TYPES.FIGHTER]: 0, [UNIT_TYPES.SHIP]: 0, [UNIT_TYPES.LANDER]: 0 },
     [UNIT_TYPES.HELI]:     { [UNIT_TYPES.INFANTRY]: 60, [UNIT_TYPES.APC]: 60, [UNIT_TYPES.TANK]: 30, [UNIT_TYPES.ARTILLERY]: 60, [UNIT_TYPES.ANTIAIR]: 35, [UNIT_TYPES.SUPPLY]: 60, [UNIT_TYPES.HELI]: 60, [UNIT_TYPES.BOMBER]: 15, [UNIT_TYPES.FIGHTER]: 15, [UNIT_TYPES.SHIP]: 20, [UNIT_TYPES.LANDER]: 40 },
     [UNIT_TYPES.FIGHTER]:  { [UNIT_TYPES.INFANTRY]: 65, [UNIT_TYPES.APC]: 50, [UNIT_TYPES.TANK]: 25, [UNIT_TYPES.ARTILLERY]: 30, [UNIT_TYPES.ANTIAIR]: 30, [UNIT_TYPES.SUPPLY]: 30, [UNIT_TYPES.HELI]: 100, [UNIT_TYPES.BOMBER]: 100, [UNIT_TYPES.FIGHTER]: 55, [UNIT_TYPES.SHIP]: 20, [UNIT_TYPES.LANDER]: 40 },
     [UNIT_TYPES.BOMBER]:   { [UNIT_TYPES.INFANTRY]: 85, [UNIT_TYPES.APC]: 110, [UNIT_TYPES.TANK]: 105, [UNIT_TYPES.ARTILLERY]: 110, [UNIT_TYPES.ANTIAIR]: 105, [UNIT_TYPES.SUPPLY]: 110, [UNIT_TYPES.HELI]: 0, [UNIT_TYPES.BOMBER]: 0, [UNIT_TYPES.FIGHTER]: 0, [UNIT_TYPES.SHIP]: 85, [UNIT_TYPES.CARRIER]: 105, [UNIT_TYPES.LANDER]: 105 },
-    [UNIT_TYPES.SHIP]:     { [UNIT_TYPES.INFANTRY]: 55, [UNIT_TYPES.APC]: 80, [UNIT_TYPES.TANK]: 80, [UNIT_TYPES.ARTILLERY]: 80, [UNIT_TYPES.ANTIAIR]: 80, [UNIT_TYPES.SUPPLY]: 80, [UNIT_TYPES.HELI]: 85, [UNIT_TYPES.BOMBER]: 85, [UNIT_TYPES.FIGHTER]: 85, [UNIT_TYPES.SHIP]: 55, [UNIT_TYPES.CARRIER]: 60, [UNIT_TYPES.LANDER]: 95 },
+    [UNIT_TYPES.SHIP]:     { [UNIT_TYPES.INFANTRY]: 55, [UNIT_TYPES.APC]: 80, [UNIT_TYPES.TANK]: 80, [UNIT_TYPES.ARTILLERY]: 80, [UNIT_TYPES.ANTIAIR]: 80, [UNIT_TYPES.SUPPLY]: 85, [UNIT_TYPES.HELI]: 85, [UNIT_TYPES.BOMBER]: 85, [UNIT_TYPES.FIGHTER]: 85, [UNIT_TYPES.SHIP]: 55, [UNIT_TYPES.CARRIER]: 60, [UNIT_TYPES.LANDER]: 95 },
     [UNIT_TYPES.CARRIER]:  { [UNIT_TYPES.INFANTRY]: 0, [UNIT_TYPES.APC]: 0, [UNIT_TYPES.TANK]: 0, [UNIT_TYPES.ARTILLERY]: 0, [UNIT_TYPES.ANTIAIR]: 0, [UNIT_TYPES.SUPPLY]: 0, [UNIT_TYPES.HELI]: 100, [UNIT_TYPES.BOMBER]: 100, [UNIT_TYPES.FIGHTER]: 80, [UNIT_TYPES.SHIP]: 0, [UNIT_TYPES.LANDER]: 0 },
     [UNIT_TYPES.LANDER]:   { [UNIT_TYPES.INFANTRY]: 0, [UNIT_TYPES.APC]: 0, [UNIT_TYPES.TANK]: 0, [UNIT_TYPES.ARTILLERY]: 0, [UNIT_TYPES.ANTIAIR]: 0, [UNIT_TYPES.SUPPLY]: 0, [UNIT_TYPES.HELI]: 0, [UNIT_TYPES.BOMBER]: 0, [UNIT_TYPES.FIGHTER]: 0, [UNIT_TYPES.SHIP]: 0, [UNIT_TYPES.LANDER]: 0 }
 };
@@ -2060,8 +2089,8 @@ const INITIAL_UNITS = [
         // {type: UNIT_TYPES.TANK, owner: 0, x: 5, y: 8, hp: 100},
         // {type: UNIT_TYPES.LANDER, owner: 1, x: 2, y: 6, cargo: {type: UNIT_TYPES.INFANTRY, owner: 1}},
         // {type: UNIT_TYPES.LANDER, owner: 0, x: 7, y: 5},
-        {type: UNIT_TYPES.SHIP, owner: 1, x: 0, y: 6, hp: 50, cargo: {type: UNIT_TYPES.INFANTRY}},
-        {type: UNIT_TYPES.SHIP, owner: 0, x: 5, y: 8, hp: 100},
+        {type: UNIT_TYPES.TANK, owner: 1, x: 0, y: 8, hp: 100, cargo: {type: UNIT_TYPES.INFANTRY}},
+        {type: UNIT_TYPES.APC, owner: 0, x: 5, y: 8, hp: 10, cargo: {type: UNIT_TYPES.INFANTRY}},
     ],
     [], [], [], [], [], [], [], [], [],[],[],[],[],[],[], //5-19 Empty
     // Stage 20 デビラー
@@ -2112,19 +2141,20 @@ const INITIAL_UNITS = [
     ],
     // Stage b マースタビ
     [
-        {type: UNIT_TYPES.TANK, owner: 1, x: 5, y: 1, hp: 100},
-        {type: UNIT_TYPES.APC, owner: 1, x: 6, y: 1, hp: 100},
-        {type: UNIT_TYPES.APC, owner: 1, x: 7, y: 1, hp: 100},
-        {type: UNIT_TYPES.ARTILLERY, owner: 1, x: 4, y: 2, hp: 80},
         {type: UNIT_TYPES.INFANTRY, owner: 1, x: 7, y: 5, hp: 100},
         {type: UNIT_TYPES.INFANTRY, owner: 1, x: 3, y: 6, hp: 100},
         {type: UNIT_TYPES.INFANTRY, owner: 1, x: 5, y: 7, hp: 100},
         {type: UNIT_TYPES.INFANTRY, owner: 1, x: 6, y: 7, hp: 100},
-        {type: UNIT_TYPES.ARTILLERY, owner: 1, x: 7, y: 8, hp: 100},
         {type: UNIT_TYPES.INFANTRY, owner: 1, x: 6, y: 10, hp: 100},
         {type: UNIT_TYPES.INFANTRY, owner: 1, x: 12, y: 9, hp: 100},
         {type: UNIT_TYPES.INFANTRY, owner: 1, x: 14, y: 9, hp: 100},
         {type: UNIT_TYPES.INFANTRY, owner: 1, x: 14, y: 5, hp: 100},
+        {type: UNIT_TYPES.TANK, owner: 1, x: 5, y: 1, hp: 100},
+        {type: UNIT_TYPES.APC, owner: 1, x: 6, y: 1, hp: 100},
+        {type: UNIT_TYPES.APC, owner: 1, x: 7, y: 1, hp: 100},
+        {type: UNIT_TYPES.ARTILLERY, owner: 1, x: 4, y: 2, hp: 80},
+        {type: UNIT_TYPES.ARTILLERY, owner: 1, x: 7, y: 8, hp: 100},
+        
         {type: UNIT_TYPES.INFANTRY, owner: 0, x: 25, y: 7, hp: 100},
         {type: UNIT_TYPES.TANK, owner: 0, x: 24, y: 6, hp: 100},
     ],
@@ -2165,6 +2195,13 @@ const INITIAL_UNITS = [
     [
         {type: UNIT_TYPES.INFANTRY, owner: 1, x: 5, y: 28, hp: 90},
         {type: UNIT_TYPES.INFANTRY, owner: 1, x: 26, y: 28, hp: 100},
+        {type: UNIT_TYPES.TANK, owner: 1, x: 26, y: 13, hp: 100},
+        {type: UNIT_TYPES.TANK, owner: 1, x: 26, y: 14, hp: 100},
+        {type: UNIT_TYPES.LANDER, owner: 1, x: 24, y: 1, hp: 100, cargo: {type: UNIT_TYPES.BOMBER, owner: 1}},
+        {type: UNIT_TYPES.LANDER, owner: 1, x: 22, y: 0, hp: 100, cargo: {type: UNIT_TYPES.FIGHTER, owner: 1}},
+        {type: UNIT_TYPES.ANTIAIR, owner: 1, x: 7, y: 23, hp: 100},
+        {type: UNIT_TYPES.ANTIAIR, owner: 1, x: 2, y: 23, hp: 100},
+        {type: UNIT_TYPES.SHIP, owner: 1, x: 7, y: 17, hp: 100},
     ]
 ];
 
@@ -2177,14 +2214,20 @@ class Game {
         this.buildings = [];
         this.effects = []; 
         this.turn = 0; 
+        this.turnCount = 1;
         this.funds = [0, 0];
         this.selectedUnit = null;
         this.selectedTarget = null; 
         this.state = 'IDLE'; 
         this.moveRange = [];
         this.dropRange = [];
+        this.cpuMoveRange = [];
+        this.infoUnit = null;
+        this.cargoCanvas = document.getElementById('cargo-canvas');
+        this.cargoCtx = this.cargoCanvas.getContext('2d');
         this.cameraOffset = {x:0, y:0};
         this.tempUnitState = null;
+        this.endTurnButtonTimer = null;
         
         this.isDragging = false;
         this.dragStartX = 0;
@@ -2213,7 +2256,34 @@ class Game {
         loop();
     }
 
+    hideEndTurnButton() {
+        if (this.endTurnButtonTimer) {
+            clearTimeout(this.endTurnButtonTimer);
+            this.endTurnButtonTimer = null;
+        }
+        document.getElementById('end-turn-btn').style.display = 'none';
+    }
+
+    showEndTurnButtonWithDelay() {
+        if (this.endTurnButtonTimer) {
+            clearTimeout(this.endTurnButtonTimer);
+        }
+        // Don't show if game is over
+        if (this.turn === -1) return;
+
+        this.endTurnButtonTimer = setTimeout(() => {
+            // Only show if it's player's turn and game is idle or move select state
+            if (this.turn === 0 && (this.state === 'IDLE' || this.state === 'MOVE_SELECT')) {
+                document.getElementById('end-turn-btn').style.display = 'block';
+            }
+            this.endTurnButtonTimer = null;
+        }, 500); // 0.5 second delay
+    }
+
     update() {
+        if (this.infoUnit && !this.units.includes(this.infoUnit)) {
+            this.clearInfo();
+        }
         this.updateEffects();
         this.updateAnimations();
     }
@@ -2424,7 +2494,7 @@ class Game {
 
     initInput() {
         const isMenuOpen = () => {
-            const ids = ['menu-overlay', 'message-overlay', 'production-menu', 'help-modal', 'game-menu-modal'];
+            const ids = ['menu-overlay', 'message-overlay', 'production-menu', 'help-modal', 'game-menu-modal', 'action-menu'];
             return ids.some(id => {
                 const el = document.getElementById(id);
                 return el.style.display === 'block' || el.style.display === 'flex';
@@ -2498,21 +2568,33 @@ class Game {
         };
 
         const handleEnd = (e) => {
-            if (isMenuOpen()) return;
-            
+            const generalOverlayIds = ['menu-overlay', 'message-overlay', 'production-menu', 'help-modal', 'game-menu-modal', 'action-menu'];
+            const isGeneralOverlayOpen = generalOverlayIds.some(id => {
+                const el = document.getElementById(id);
+                return el.style.display === 'block' || el.style.display === 'flex';
+            });
+
+            if (isGeneralOverlayOpen) return; // Completely block if a major menu is open
+
             let wasPinching = this.isPinching;
             if (this.isPinching && (!e.touches || e.touches.length < 2)) {
                 this.isPinching = false;
                 this.pinchStartDistance = null;
             }
 
+            // Allow taps on UI buttons, even during targeting states
             if (isUI(e.target)) return;
             
+            // Allow handleClick if not dragging/pinching/animating, AND it's a targeting state or IDLE/MOVE_SELECT
             if (!this.isDragging && !wasPinching && this.state !== 'ANIMATING') {
-                if (e.cancelable) e.preventDefault();
-                const cx = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
-                const cy = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
-                if (this.turn === 0) {
+                const isTargetingState = ['TARGET_SELECT', 'CONFIRM_ATTACK', 'REACT_SELECT', 'CONFIRM_REACT', 'DROP_SELECT'].includes(this.state);
+                
+                // If it's a targeting state, we *want* handleClick to fire so it can select a target.
+                // If it's IDLE or MOVE_SELECT, handleClick is also expected to fire (handled by this.turn === 0).
+                if (this.turn === 0 || isTargetingState) { // Allow tap for player or any targeting state
+                    if (e.cancelable) e.preventDefault();
+                    const cx = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+                    const cy = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
                     const rect = this.canvas.getBoundingClientRect();
                     const pos = this.screenToGrid(cx - rect.left, cy - rect.top);
                     if (pos) this.handleClick(pos.x, pos.y);
@@ -2563,35 +2645,19 @@ class Game {
     async handleClick(x, y) {
         if (this.state === 'ANIMATING') return;
 
-        const unit = this.units.find(u => u.x === x && u.y === y);
-        const building = this.buildings.find(b => b.x === x && b.y === y);
-
-        if (this.state === 'IDLE') {
-            if (unit && unit.owner === 0 && !unit.finished) {
-                this.selectedUnit = unit;
-                this.tempUnitState = {x: unit.x, y: unit.y}; 
-                this.calcMoveRange(unit);
-                this.state = 'MOVE_SELECT';
-                return;
-            }
-            if (!unit && building && building.owner === 0) {
-                this.openProductionMenu(building);
-                return;
-            }
-        } 
-        else if (this.state === 'MOVE_SELECT') {
-            const valid = this.moveRange.some(p => p.x === x && p.y === y);
-            if (valid) {
+        // --- Step 1: Handle ongoing player actions ---
+        // If an action is completed, return early.
+        if (this.state === 'MOVE_SELECT') {
+            const isValidMove = this.moveRange.some(p => p.x === x && p.y === y);
+            if (isValidMove) {
+                this.clearInfo(); // Clear info before moving the unit
+                this.hideEndTurnButton();
                 await this.animateUnitMove(this.selectedUnit, x, y);
                 this.state = 'ACTION_SELECT';
                 this.showActionMenu();
-            } else {
-                this.selectedUnit = null;
-                this.state = 'IDLE';
-                this.handleClick(x, y); 
+                return; // Click handled as a move
             }
-        }
-        else if (this.state === 'TARGET_SELECT') {
+        } else if (this.state === 'TARGET_SELECT') {
             const targets = this.getAttackTargets(this.selectedUnit);
             const target = targets.find(t => t.x === x && t.y === y);
             if (target) {
@@ -2599,14 +2665,19 @@ class Game {
                 this.state = 'CONFIRM_ATTACK';
                 document.getElementById('targeting-ui').style.display = 'none';
                 document.getElementById('confirm-attack-ui').style.display = 'flex';
+                this.clearInfo(); // Clear previous info, new target is highlighted
+                return; // Click handled as target selection
             }
-        }
-        else if (this.state === 'CONFIRM_ATTACK') {
-             const targets = this.getAttackTargets(this.selectedUnit);
-             const target = targets.find(t => t.x === x && t.y === y);
-             if (target) this.selectedTarget = target;
-        }
-        else if (this.state === 'REACT_SELECT') {
+        } else if (this.state === 'CONFIRM_ATTACK') {
+            const targets = this.getAttackTargets(this.selectedUnit);
+            const target = targets.find(t => t.x === x && t.y === y);
+            if (target) {
+                this.selectedTarget = target;
+                // No state change, just target update. Still need to redraw.
+                this.draw(); 
+                return; // Click handled as target change
+            }
+        } else if (this.state === 'REACT_SELECT') {
             const targets = this.getReactTargets(this.selectedUnit);
             const target = targets.find(t => t.x === x && t.y === y);
             if (target) {
@@ -2614,18 +2685,70 @@ class Game {
                 this.state = 'CONFIRM_REACT';
                 document.getElementById('react-ui').style.display = 'none';
                 document.getElementById('confirm-react-ui').style.display = 'flex';
+                this.clearInfo(); // Clear previous info, new target is highlighted
+                return; // Click handled as react selection
             }
-        }
-        else if (this.state === 'CONFIRM_REACT') {
-             const targets = this.getReactTargets(this.selectedUnit);
-             const target = targets.find(t => t.x === x && t.y === y);
-             if (target) this.selectedTarget = target;
-        }
-        else if (this.state === 'DROP_SELECT') {
+        } else if (this.state === 'CONFIRM_REACT') {
+            const targets = this.getReactTargets(this.selectedUnit);
+            const target = targets.find(t => t.x === x && t.y === y);
+            if (target) {
+                this.selectedTarget = target;
+                this.draw();
+                return;
+            }
+        } else if (this.state === 'DROP_SELECT') {
             const dropPos = this.dropRange.find(p => p.x === x && p.y === y);
             if (dropPos) {
                 this.executeDrop(dropPos.x, dropPos.y);
+                return; // Click handled as drop
             }
+        }
+
+        // --- 新しいチェック: ターゲット選択/確認/降下ステート中で、
+        //               かつクリックが Step 1 で処理されなかった場合は、一般的な情報/生産を無視する。
+        const isCurrentlyTargeting = ['TARGET_SELECT', 'CONFIRM_ATTACK', 'REACT_SELECT', 'CONFIRM_REACT', 'DROP_SELECT'].includes(this.state);
+        if (isCurrentlyTargeting) {
+            // クリックが有効なターゲット/降下ではなかった場合、かつターゲット選択ステート中の場合は、
+            // ユニット情報の表示や生産の開始など、他のアクションは実行しない。
+            // 既存の情報表示をクリアし、再描画してハイライトを更新するだけにする。
+            this.clearInfo(); // 既存の情報表示をクリア
+            this.draw(); // ハイライトを更新するために再描画
+            return; // クリックは、現在の操作の有効なターゲット/降下選択ではなかったため、無視する。
+        }
+
+        // --- 元の Step 2: 進行中のアクションが処理されなかった、かつターゲット選択ステート中でない場合、
+        //                      プレイヤーのアクションステートをリセットし、新しい情報/選択を表示 ---
+        this.cleanupUI(); // ステートを IDLE にリセットし、selectedUnit をクリアし、アクションメニューを非表示にする
+        this.clearInfo(); // 以前に表示されていた情報（カーゴ、CPU移動範囲）をクリアする
+
+        const clickedUnit = this.units.find(u => u.x === x && u.y === y);
+        const clickedBuilding = this.buildings.find(b => b.x === x && b.y === y);
+
+
+        if (clickedUnit) {
+            this.showInfoForUnit(clickedUnit); // This will display cargo info and/or CPU move range
+
+            if (this.turn === 0 && clickedUnit.owner === 0 && !clickedUnit.finished) {
+                // Select player's own unit for action if it's their turn and unit hasn't acted
+                this.selectedUnit = clickedUnit;
+                this.tempUnitState = {x: clickedUnit.x, y: clickedUnit.y}; 
+                this.calcMoveRange(clickedUnit);
+                this.state = 'MOVE_SELECT';
+                this.showEndTurnButtonWithDelay(); // Keep end turn button if player unit is selected
+            } else if (this.turn === 0 && clickedUnit.owner === 0 && clickedUnit.finished) {
+                // If player unit already finished, just show info.
+                // No action possible.
+                this.state = 'IDLE'; // Ensure state is IDLE, cleanupUI already does this. // Hide end turn as no unit is selected for action.
+            }
+            // If it's a CPU unit (owner === 1), info is shown, but no action is taken by player.
+            // State remains IDLE.
+        } else if (clickedBuilding && this.turn === 0 && clickedBuilding.owner === 0) {
+            // Clicked on player's own building, open production menu
+            this.openProductionMenu(clickedBuilding);
+        } else {
+            // Clicked on empty tile or enemy building/unit. No action, just clear info.
+            this.state = 'IDLE'; // Ensure state is IDLE
+            this.showEndTurnButtonWithDelay();
         }
     }
 
@@ -2681,8 +2804,13 @@ class Game {
         if (!tStats || !tStats.capacityType) return false; 
         if (!tStats.capacityType.includes(UNITS[unit.type].moveType)) return false;
 
-        const tType = this.map[transporter.y][transporter.x];
+        const tType = this.map[transporter.y][transporter.x]; // Transporter's terrain
         const unitStats = UNITS[unit.type];
+
+        // New restriction: Prevent boarding on Forest or Mountain terrain
+        if (tType === TERRAIN.FOREST || tType === TERRAIN.MOUNTAIN) {
+            return false;
+        }
 
         // 兵士(歩兵)ユニットは、水地形(海、川、池)の上の輸送ユニットには搭乗できない
         if (unitStats.moveType === MOVETYPE.FOOT && (tType === TERRAIN.SEA || tType === TERRAIN.RIVER || tType === TERRAIN.POND)) {
@@ -2895,6 +3023,8 @@ class Game {
         document.getElementById('drop-ui').style.display = 'none';
         document.getElementById('react-ui').style.display = 'none';
         document.getElementById('confirm-react-ui').style.display = 'none';
+        this.clearInfo(); // Clear any info display on UI cleanup
+        this.showEndTurnButtonWithDelay();
     }
 
     completeAction() {
@@ -3072,6 +3202,7 @@ class Game {
         this.showToast(`占領中... 残り${Math.max(0, b.capture)}`);
         if (b.capture <= 0) {
             b.owner = u.owner;
+            this.updateUI();
             b.capture = 20;
             this.showToast("占領完了！");
         }
@@ -3124,6 +3255,9 @@ class Game {
 
     endTurn() {
         this.turn = (this.turn + 1) % 2;
+        if (this.turn === 0) { // New round starts with player's turn
+            this.turnCount++;
+        }
         
         if (this.turn === 1) {
             // Sort units so Supply Truck moves last
@@ -3191,14 +3325,118 @@ class Game {
 
         this.updateUI();
         this.cleanupUI();
+        this.clearInfo(); // Clear info display when turn ends
 
         if (this.turn === 1) {
-            document.getElementById('end-turn-btn').style.display = 'none';
+            this.hideEndTurnButton();
             this.showToast("CPUのターン");
             setTimeout(() => this.cpuTurn(), 800);
         } else {
-            document.getElementById('end-turn-btn').style.display = 'block';
+            this.showEndTurnButtonWithDelay();
             this.showToast("あなたのターン");
+        }
+    }
+
+    clearInfo() {
+        this.infoUnit = null;
+        this.cpuMoveRange = [];
+        document.getElementById('cargo-info-panel').style.display = 'none';
+    }
+
+    showInfoForUnit(unit) {
+        this.infoUnit = unit;
+        if (unit.cargo) {
+            document.getElementById('cargo-info-panel').style.display = 'flex';
+            this.drawCargoUnit(unit.cargo);
+        }
+        if (unit.owner === 1) { // CPU
+            this.calcCpuMoveRange(unit);
+        }
+    }
+
+    drawCargoUnit(cargo) {
+        const ctx = this.cargoCtx;
+        const TILE_SIZE = 60; // Fixed size for the info panel canvas
+        ctx.clearRect(0, 0, TILE_SIZE, TILE_SIZE);
+
+        const baseColor = '#999'; // Neutral color for info display
+
+        ctx.fillStyle = baseColor;
+        ctx.beginPath();
+        ctx.arc(TILE_SIZE / 2, TILE_SIZE / 2, TILE_SIZE / 2 - 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = '#fff';
+        ctx.font = `bold ${Math.floor(TILE_SIZE / 2.5)}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(UNITS[cargo.type].label, TILE_SIZE / 2, TILE_SIZE / 2);
+
+        const hpPct = cargo.hp / 100;
+        ctx.fillStyle = 'red';
+        ctx.fillRect(2, TILE_SIZE - 6, TILE_SIZE - 4, 4);
+        ctx.fillStyle = hpPct > 0.5 ? '#0f0' : '#ff0';
+        ctx.fillRect(2, TILE_SIZE - 6, (TILE_SIZE - 4) * hpPct, 4);
+
+        // Always show cargo indicator
+        ctx.fillStyle = '#a0f'; // Purple
+        ctx.beginPath();
+        ctx.arc(TILE_SIZE - 6, 6, TILE_SIZE * 0.1, 0, Math.PI * 2);
+        ctx.fill();
+
+        const statsEl = document.getElementById('cargo-stats');
+        statsEl.innerText = `HP: ${cargo.hp}\n弾: ${cargo.ammo}`;
+    }
+
+    calcCpuMoveRange(unit) {
+        this.cpuMoveRange = [];
+        const stats = UNITS[unit.type];
+        let costs = {};
+        let queue = [{x: unit.x, y: unit.y, cost: 0}];
+        costs[`${unit.x},${unit.y}`] = 0;
+
+        this.cpuMoveRange.push({x: unit.x, y: unit.y});
+
+        while (queue.length > 0) {
+            queue.sort((a,b) => a.cost - b.cost);
+            const curr = queue.shift();
+            if (curr.cost >= stats.move) continue;
+
+            [[0,1],[0,-1],[1,0],[-1,0]].forEach(([dx, dy]) => {
+                const nx = curr.x + dx, ny = curr.y + dy;
+                if (nx>=0 && nx<COLS && ny>=0 && ny<ROWS) {
+                    let mCost = TERRAIN_PROPS[this.map[ny][nx]].cost;
+                    const tType = this.map[ny][nx];
+
+                    if (unit.type === UNIT_TYPES.INFANTRY && tType === TERRAIN.FOREST) mCost = 1;
+                    if (stats.moveType === MOVETYPE.SEA && (tType !== TERRAIN.SEA && tType !== TERRAIN.PORT && tType !== TERRAIN.SHOAL)) mCost = 999;
+                    if ((stats.moveType === MOVETYPE.LAND || stats.moveType === MOVETYPE.FOOT) && tType === TERRAIN.SEA) mCost = 999;
+                    if (stats.moveType === MOVETYPE.LAND && tType === TERRAIN.MOUNTAIN) mCost = 999;
+                    if (stats.moveType === MOVETYPE.FOOT && tType === TERRAIN.MOUNTAIN) mCost = 2;
+                    if (tType === TERRAIN.RIVER) {
+                        if (stats.moveType === MOVETYPE.FOOT) mCost = 2; else if (stats.moveType === MOVETYPE.SEA) mCost = 999;
+                    }
+                    if (tType === TERRAIN.POND) {
+                         if (stats.moveType === MOVETYPE.FOOT) mCost = 2; else if (stats.moveType === MOVETYPE.SEA) mCost = 999;
+                    }
+                    if (stats.moveType === MOVETYPE.AIR) mCost = 1;
+                    
+                    const newCost = curr.cost + mCost;
+                    if (newCost <= stats.move) {
+                        const key = `${nx},${ny}`;
+                        if ((costs[key] === undefined || newCost < costs[key]) && mCost < 999) {
+                            costs[key] = newCost;
+                            if (!this.cpuMoveRange.some(p => p.x === nx && p.y === ny)) {
+                                this.cpuMoveRange.push({x: nx, y: ny});
+                            }
+                            queue.push({x: nx, y: ny, cost: newCost});
+                        }
+                    }
+                }
+            });
         }
     }
 
@@ -3622,19 +3860,26 @@ class Game {
         if (!blueHQ) winner = 'CPU (赤軍)';
         if (!redHQ) winner = 'YOU (青軍)';
         
-        if (winner) {
-            document.getElementById('message-text').innerText = `${winner} の勝利！`;
-            document.getElementById('message-overlay').style.display = 'flex';
-            document.getElementById('end-turn-btn').style.display = 'none';
-            this.turn = -1; 
-        }
-    }
+            if (winner) {
+                const messageEl = document.getElementById('message-text');
+                messageEl.innerHTML = `
+                    ${winner} の勝利！
+                    <p style="font-size: 0.6em; margin-top: 10px;">経過ターン: ${this.turnCount}</p>
+                `;
+                document.getElementById('message-overlay').style.display = 'flex';
+                document.getElementById('end-turn-btn').style.display = 'none';
+                this.turn = -1; 
+            }    }
 
     updateUI() {
+        const blueIncome = this.buildings.filter(b => b.owner === 0).length * 1000;
+        const redIncome = this.buildings.filter(b => b.owner === 1).length * 1000;
+
         document.getElementById('info-panel').style.display = 'block';
         document.getElementById('info-panel').innerHTML = `
-            <div style="color:#48f;font-weight:bold">青軍: ¥${this.funds[0]}</div>
-            <div style="color:#f44;">赤軍: ¥${this.funds[1]}</div>
+            <div style="color:#48f;font-weight:bold">青軍: ¥${this.funds[0]} 収入: ¥${blueIncome}</div>
+            <div style="color:#f44;font-weight:bold;">赤軍: ¥${this.funds[1]} 収入: ¥${redIncome}</div>
+            <div style="margin-top:4px;font-size:12px; color:#333;">ターン: ${this.turnCount}</div>
             <div style="margin-top:4px;font-size:11px;">${this.turn === 0 ? 'あなたのターン' : 'CPU思考中'}</div>
         `;
     }
@@ -3651,6 +3896,11 @@ class Game {
         this.map.forEach((row, y) => row.forEach((t, x) => this.drawTile(x, y, t)));
         this.buildings.forEach(b => this.drawBuilding(b));
         
+        if (this.cpuMoveRange.length > 0) {
+            this.ctx.fillStyle = 'rgba(255, 0, 0, 0.3)'; // Semi-transparent red for CPU move range
+            this.cpuMoveRange.forEach(p => this.ctx.fillRect(p.x*TILE_SIZE+2, p.y*TILE_SIZE+2, TILE_SIZE-4, TILE_SIZE-4));
+        }
+
         if (this.state === 'MOVE_SELECT') {
             this.ctx.fillStyle = 'rgba(255,255,255,0.4)';
             this.moveRange.forEach(p => this.ctx.fillRect(p.x*TILE_SIZE+2, p.y*TILE_SIZE+2, TILE_SIZE-4, TILE_SIZE-4));
