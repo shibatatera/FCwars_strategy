@@ -2494,7 +2494,7 @@ class Game {
 
     initInput() {
         const isMenuOpen = () => {
-            const ids = ['menu-overlay', 'message-overlay', 'production-menu', 'help-modal', 'game-menu-modal', 'action-menu'];
+            const ids = ['menu-overlay', 'message-overlay', 'production-menu', 'help-modal', 'game-menu-modal'];
             return ids.some(id => {
                 const el = document.getElementById(id);
                 return el.style.display === 'block' || el.style.display === 'flex';
@@ -2574,7 +2574,13 @@ class Game {
                 return el.style.display === 'block' || el.style.display === 'flex';
             });
 
-            if (isGeneralOverlayOpen) return; // Completely block if a major menu is open
+            // If an overlay is open, we must reset the drag state and then stop further processing.
+            if (isGeneralOverlayOpen) {
+                this.isDragging = false;
+                this.dragStartX = null;
+                this.dragStartY = null;
+                return;
+            }
 
             let wasPinching = this.isPinching;
             if (this.isPinching && (!e.touches || e.touches.length < 2)) {
